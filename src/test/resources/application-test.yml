@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+app:
+  seed:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.healthcareai: INFO
+    org.hibernate.SQL: WARN

@@ -1,0 +1,152 @@
+spring:
+  application:
+    name: ai-automation-java
+
+  datasource:
+    url: jdbc:postgresql://localhost:5442/healthcareai
+    username: healthcareai
+    password: healthcareai
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: 2
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  security:
+    filter:
+      dispatcher-types: REQUEST,ASYNC
+
+server:
+  port: ${SERVER_PORT:8081}
+  error:
+    include-message: always
+    include-binding-errors: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    com.healthcareai: ${LOG_LEVEL:INFO}
+
+app:
+  scheduler:
+    reminder-check-interval-ms: ${REMINDER_CHECK_INTERVAL_MS:900000}
+
+  # Demo data seeding (com.healthcareai.seed.DemoDataSeeder). Runs once on
+  # startup and only inserts rows into tables that are currently empty, so
+  # it is safe to leave enabled across restarts. Disable in real production
+  # deployments that already have real data via SEED_DEMO_DATA=false.
+  seed:
+    enabled: ${SEED_DEMO_DATA:true}
+    doctor-count: ${SEED_DOCTOR_COUNT:15}
+    patient-count: ${SEED_PATIENT_COUNT:200}
+    appointment-count: ${SEED_APPOINTMENT_COUNT:500}
+    knowledge-base-article-count: ${SEED_KB_ARTICLE_COUNT:100}
+    faq-count: ${SEED_FAQ_COUNT:50}
+
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+
+  jwt:
+    secret: ${JWT_SECRET:change-me-in-production-to-a-long-random-secret-value}
+    issuer: healthcareai
+    access-token-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:60}
+    refresh-token-ttl-days: ${JWT_REFRESH_TTL_DAYS:7}
+
+  clinic:
+    name: ${CLINIC_NAME:Healthcare Clinic}
+    timezone: ${CLINIC_TIMEZONE:UTC}
+    working-hours-start: ${CLINIC_WORKING_HOURS_START:09:00}
+    working-hours-end: ${CLINIC_WORKING_HOURS_END:17:00}
+    appointment-slot-minutes: ${APPOINTMENT_SLOT_MINUTES:30}
+    reminder-hours-before: ${REMINDER_HOURS_BEFORE:24}
+    escalation-email: ${ESCALATION_EMAIL:}
+    escalation-phone-number: ${ESCALATION_PHONE_NUMBER:}
+
+  # AI chat/tool-calling + embeddings provider: Google Gemini, accessed
+  # directly over its REST API (no SDK). See GeminiClient/GeminiProperties.
+  # IMPORTANT: this must be indented as a direct child of `app:` (2 spaces),
+  # NOT nested under `clinic:` - otherwise it binds to app.clinic.gemini.*
+  # instead of app.gemini.*, GeminiProperties.apiKey() silently ends up
+  # null, no x-goog-api-key header is sent, and every Gemini call fails
+  # authentication (surfacing as a generic 503 from /api/chat).
+  # NOTE: "gemini-2.5-flash" and "gemini-2.5-flash-lite" return
+  # HTTP 404 "This model ... is no longer available to new users" for API
+  # keys/projects created after Google's cutover (confirmed by direct
+  # testing against this key). "gemini-flash-latest" is a stable alias
+  # that Google keeps pointed at a currently-available flash model, so
+  # it's used here instead. Run
+  #   GET https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY
+  # to see which concrete models your key currently supports.
+  gemini:
+    api-key: AQ.Ab8RN6IqPaqmZXIMe8MX0_cQXGTLu7ce_yWzvYBACdWIOaJhnw
+    model: gemini-flash-latest
+    base-url: https://generativelanguage.googleapis.com/v1beta
+    timeout-seconds: 30
+    temperature: 0.2
+    embedding-model: gemini-embedding-001
+    embedding-dimensions: 1536
+
+  twilio:
+    enabled: ${TWILIO_ENABLED:false}
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    from-number: ${TWILIO_FROM_NUMBER:}
+
+  whatsapp:
+    enabled: ${WHATSAPP_ENABLED:false}
+    base-url: ${WHATSAPP_BASE_URL:https://graph.facebook.com/v20.0}
+    phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+    access-token: ${WHATSAPP_ACCESS_TOKEN:}
+
+  google-calendar:
+    enabled: ${GOOGLE_CALENDAR_ENABLED:false}
+    application-name: ${GOOGLE_CALENDAR_APP_NAME:HealthcareAI}
+    calendar-id: ${GOOGLE_CALENDAR_ID:primary}
+    service-account-key-path: ${GOOGLE_CALENDAR_KEY_PATH:}
+
+  n8n:
+    enabled: ${N8N_ENABLED:false}
+    webhook-base-url: ${N8N_WEBHOOK_BASE_URL:}
+    inbound-webhook-secret: ${N8N_INBOUND_WEBHOOK_SECRET:}

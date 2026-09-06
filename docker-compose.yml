@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: healthcareai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-healthcareai}
+      POSTGRES_USER: ${DB_USERNAME:-healthcareai}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-healthcareai}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - healthcareai-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-healthcareai} -d ${DB_NAME:-healthcareai}"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthcareai-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-healthcareai}
+      DB_USERNAME: ${DB_USERNAME:-healthcareai}
+      DB_PASSWORD: ${DB_PASSWORD:-healthcareai}
+
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-to-a-long-random-secret-value}
+      JWT_ACCESS_TTL_MINUTES: ${JWT_ACCESS_TTL_MINUTES:-60}
+      JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-7}
+
+      CLINIC_NAME: ${CLINIC_NAME:-Healthcare Clinic}
+      CLINIC_TIMEZONE: ${CLINIC_TIMEZONE:-UTC}
+      CLINIC_WORKING_HOURS_START: ${CLINIC_WORKING_HOURS_START:-09:00}
+      CLINIC_WORKING_HOURS_END: ${CLINIC_WORKING_HOURS_END:-17:00}
+      APPOINTMENT_SLOT_MINUTES: ${APPOINTMENT_SLOT_MINUTES:-30}
+      REMINDER_HOURS_BEFORE: ${REMINDER_HOURS_BEFORE:-24}
+      ESCALATION_EMAIL: ${ESCALATION_EMAIL:-}
+      ESCALATION_PHONE_NUMBER: ${ESCALATION_PHONE_NUMBER:-}
+
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+      GEMINI_TIMEOUT_SECONDS: ${GEMINI_TIMEOUT_SECONDS:-30}
+      GEMINI_TEMPERATURE: ${GEMINI_TEMPERATURE:-0.2}
+      GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
+      GEMINI_EMBEDDING_DIMENSIONS: ${GEMINI_EMBEDDING_DIMENSIONS:-1536}
+
+      TWILIO_ENABLED: ${TWILIO_ENABLED:-false}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+
+      WHATSAPP_ENABLED: ${WHATSAPP_ENABLED:-false}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+
+      GOOGLE_CALENDAR_ENABLED: ${GOOGLE_CALENDAR_ENABLED:-false}
+      GOOGLE_CALENDAR_APP_NAME: ${GOOGLE_CALENDAR_APP_NAME:-HealthcareAI}
+      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
+      GOOGLE_CALENDAR_KEY_PATH: ${GOOGLE_CALENDAR_KEY_PATH:-}
+
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+
+      N8N_ENABLED: ${N8N_ENABLED:-false}
+      N8N_WEBHOOK_BASE_URL: ${N8N_WEBHOOK_BASE_URL:-}
+      N8N_INBOUND_WEBHOOK_SECRET: ${N8N_INBOUND_WEBHOOK_SECRET:-}
+
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+    # To enable Google Calendar sync, mount your service account key and
+    # point GOOGLE_CALENDAR_KEY_PATH at it, e.g.:
+    #   volumes:
+    #     - ./secrets/google-calendar-key.json:/app/secrets/google-calendar-key.json:ro
+    #   environment:
+    #     GOOGLE_CALENDAR_ENABLED: "true"
+    #     GOOGLE_CALENDAR_KEY_PATH: /app/secrets/google-calendar-key.json
+
+volumes:
+  healthcareai-postgres-data:

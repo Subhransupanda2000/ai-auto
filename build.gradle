@@ -1,0 +1,92 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.3.5'
+	id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.healthcareai'
+version = '0.0.1-SNAPSHOT'
+description = 'AI Automation Platform for Healthcare Clinics'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+ext {
+	jjwtVersion = '0.12.6'
+}
+
+dependencies {
+	// Spring Boot starters
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+	// API documentation
+	// NOTE: springdoc 2.7.x/2.8.x require Spring Framework 6.2 (Spring Boot 3.4+).
+	// This project is on Spring Boot 3.3.5 (Spring Framework 6.1.x), so we pin
+	// the 2.6.x line, which is the last one compatible with Boot 3.3.x.
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
+	// Database
+	runtimeOnly 'org.postgresql:postgresql'
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
+
+	// Hibernate vector module (matches the Hibernate ORM version managed by
+	// this Spring Boot release) - enables the VECTOR JDBC type and the
+	// cosine_distance()/l2_distance() HQL functions used for pgvector RAG search.
+	implementation 'org.hibernate.orm:hibernate-vector:6.5.3.Final'
+
+	// Google Calendar integration
+	implementation 'com.google.api-client:google-api-client:2.7.2'
+	implementation 'com.google.apis:google-api-services-calendar:v3-rev20240927-2.0.0'
+	implementation 'com.google.auth:google-auth-library-oauth2-http:1.23.0'
+
+	// Retry policy for transient external service failures (Gemini, etc.)
+	implementation 'org.springframework.retry:spring-retry'
+	implementation 'org.springframework:spring-aspects'
+
+	// JWT
+	implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
+	runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+	runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
+
+	// Lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// Realistic fake data generation, used by the demo database seeder
+	// (com.healthcareai.seed) to populate doctors/patients/appointments/
+	// knowledge base articles on first startup.
+	implementation 'net.datafaker:datafaker:2.4.4'
+
+	// Testing
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	testImplementation 'org.testcontainers:junit-jupiter'
+	testImplementation 'org.testcontainers:postgresql'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
