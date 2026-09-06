@@ -120,8 +120,7 @@ app:
   #   GET https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY
   # to see which concrete models your key currently supports.
   gemini:
-    api-key: AQ.Ab8RN6IqPaqmZXIMe8MX0_cQXGTLu7ce_yWzvYBACdWIOaJhnw
-    model: gemini-flash-latest
+    
     base-url: https://generativelanguage.googleapis.com/v1beta
     timeout-seconds: 30
     temperature: 0.2
