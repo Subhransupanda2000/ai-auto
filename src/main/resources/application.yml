@@ -120,7 +120,6 @@ app:
   #   GET https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY
   # to see which concrete models your key currently supports.
   gemini:
-    
     base-url: https://generativelanguage.googleapis.com/v1beta
     timeout-seconds: 30
     temperature: 0.2
