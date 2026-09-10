@@ -1,3 +1,62 @@
+```
+
+C:\Users\subhr\Downloads\p-project\ai-auto>docker compose down -v
+[+] Running 3/3
+ ✔ Container healthcareai-postgres            Removed                                                                                                                         0.7s
+ ✔ Volume ai-auto_healthcareai-postgres-data  Removed                                                                                                                         0.4s
+ ✔ Network ai-auto_default                    Removed                                                                                                                         0.3s
+
+C:\Users\subhr\Downloads\p-project\ai-auto>docker compose up -d postgres
+[+] Running 3/3
+ ✔ Network ai-auto_default                      Created                                                                                                                       0.1s
+ ✔ Volume "ai-auto_healthcareai-postgres-data"  Created                                                                                                                       0.0s
+ ✔ Container healthcareai-postgres              Started                                                                                                                       0.6s
+
+C:\Users\subhr\Downloads\p-project\ai-auto>docker exec -e PGPASSWORD=healthcareai -it healthcareai-postgres psql -h localhost -p 5432 -U healthcareai -d healthcareai -c "SELECT 1;"
+ ?column?
+----------
+        1
+(1 row)
+
+
+C:\Users\subhr\Downloads\p-project\ai-auto>docker exec -it healthcareai-postgres psql -U healthcareai -d healthcareai -c "\du"
+                               List of roles
+  Role name   |                         Attributes
+--------------+------------------------------------------------------------
+ healthcareai | Superuser, Create role, Create DB, Replication, Bypass RLS
+
+
+C:\Users\subhr\Downloads\p-project\ai-auto>docker exec -e PGPASSWORD=root -it healthcareai-postgres psql -U system -d healthcareai -c "SELECT current_user;"
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "system" does not exist
+
+C:\Users\subhr\Downloads\p-project\ai-auto>docker exec -e PGPASSWORD=root -it healthcareai-postgres psql -U system -d healthcareai -c "SELECT current_user;"
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "system" does not exist
+
+C:\Users\subhr\Downloads\p-project\ai-auto>docker ps
+CONTAINER ID   IMAGE                    COMMAND                  CREATED          STATUS                    PORTS                               NAMES
+20a0e443eaa5   pgvector/pgvector:pg16   "docker-entrypoint.s…"   29 minutes ago   Up 29 minutes (healthy)   0.0.0.0:5432->5432/tcp              healthcareai-postgres
+b95bb9f4d1ad   redis:latest             "docker-entrypoint.s…"   3 weeks ago      Up 55 minutes             0.0.0.0:6379->6379/tcp              redis
+9be836592cf5   mysql:8.0.33             "docker-entrypoint.s…"   3 weeks ago      Up 55 minutes             33060/tcp, 0.0.0.0:3307->3306/tcp   database
+
+C:\Users\subhr\Downloads\p-project\ai-auto>
+
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
 # AI Automation Platform for Healthcare Clinics
 
 A production-ready Java 21 / Spring Boot 3 backend that powers an **AI Receptionist**
