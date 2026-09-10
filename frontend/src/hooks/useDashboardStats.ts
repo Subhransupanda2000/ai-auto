@@ -4,6 +4,7 @@ import { useAppointments } from './useAppointments';
 import {
   appointmentsPerDay,
   computeStats,
+  computeTrends,
   patientGrowthTrend,
   revenueTrend,
 } from '../services/dashboardService';
@@ -24,6 +25,7 @@ export function useDashboardStats() {
     isLoading,
     isError,
     stats: computeStats(patients, doctors, appointments),
+    trends: computeTrends(appointments),
     appointmentsPerDay: appointmentsPerDay(appointments),
     revenueTrend: revenueTrend(appointments),
     patientGrowth: patientGrowthTrend(patients, appointments),

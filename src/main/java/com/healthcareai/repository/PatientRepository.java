@@ -1,5 +1,6 @@
 package com.healthcareai.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -9,7 +10,11 @@ import com.healthcareai.entity.Patient;
 
 public interface PatientRepository extends JpaRepository<Patient, UUID> {
 
-    Optional<Patient> findByPhoneNumber(String phoneNumber);
+    List<Patient> findAllByTenantId(UUID tenantId);
 
-    boolean existsByPhoneNumber(String phoneNumber);
+    long countByTenantId(UUID tenantId);
+
+    Optional<Patient> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    Optional<Patient> findByTenantIdAndPhoneNumber(UUID tenantId, String phoneNumber);
 }

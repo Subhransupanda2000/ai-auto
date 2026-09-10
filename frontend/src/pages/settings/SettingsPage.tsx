@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSnackbar } from 'notistack';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import {
   Box,
   Button,
@@ -19,19 +22,61 @@ import Grid from '@mui/material/Grid2';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
+import LockResetRoundedIcon from '@mui/icons-material/LockResetRounded';
 import { PageHeader } from '../../components/common/PageHeader';
 import { LoadingState } from '../../components/common/LoadingState';
 import { useSaveSettings, useSettings } from '../../hooks/useSettings';
+import { useChangePassword } from '../../hooks/usePasswordReset';
 import { useThemeStore } from '../../store/themeStore';
 import type { AppSettings } from '../../types/settings';
+import type { ApiError } from '../../types/common';
+
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your new password'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
+
+type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
 export function SettingsPage() {
   const { enqueueSnackbar } = useSnackbar();
   const { data: settings, isLoading } = useSettings();
   const saveSettings = useSaveSettings();
+  const changePassword = useChangePassword();
   const { mode, setMode } = useThemeStore();
 
   const [draft, setDraft] = useState<AppSettings | null>(null);
+
+  const {
+    control: passwordControl,
+    handleSubmit: handlePasswordSubmit,
+    reset: resetPasswordForm,
+    formState: { errors: passwordErrors },
+  } = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+  });
+
+  const onChangePassword = handlePasswordSubmit((values) => {
+    changePassword.mutate(
+      { currentPassword: values.currentPassword, newPassword: values.newPassword },
+      {
+        onSuccess: () => {
+          enqueueSnackbar('Password updated', { variant: 'success' });
+          resetPasswordForm();
+        },
+        onError: (error) => {
+          enqueueSnackbar((error as ApiError).message, { variant: 'error' });
+        },
+      },
+    );
+  });
 
   useEffect(() => {
     if (settings && !draft) {
@@ -368,6 +413,80 @@ export function SettingsPage() {
                 label="Daily summary email"
               />
             </Stack>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader title="Security" titleTypographyProps={{ variant: 'subtitle1' }} />
+          <CardContent sx={{ pt: 0 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Change the password for your own account.
+            </Typography>
+            <Box component="form" onSubmit={onChangePassword} noValidate>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <Controller
+                    name="currentPassword"
+                    control={passwordControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="password"
+                        label="Current password"
+                        autoComplete="current-password"
+                        fullWidth
+                        error={Boolean(passwordErrors.currentPassword)}
+                        helperText={passwordErrors.currentPassword?.message}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <Controller
+                    name="newPassword"
+                    control={passwordControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="password"
+                        label="New password"
+                        autoComplete="new-password"
+                        fullWidth
+                        error={Boolean(passwordErrors.newPassword)}
+                        helperText={passwordErrors.newPassword?.message}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <Controller
+                    name="confirmPassword"
+                    control={passwordControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        type="password"
+                        label="Confirm new password"
+                        autoComplete="new-password"
+                        fullWidth
+                        error={Boolean(passwordErrors.confirmPassword)}
+                        helperText={passwordErrors.confirmPassword?.message}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <Button
+                    type="submit"
+                    variant="outlined"
+                    startIcon={<LockResetRoundedIcon />}
+                    loading={changePassword.isPending}
+                  >
+                    Update password
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
           </CardContent>
         </Card>
       </Stack>

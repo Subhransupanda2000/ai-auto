@@ -12,18 +12,25 @@ import com.healthcareai.entity.Doctor;
 
 public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
 
-    List<Doctor> findByActiveTrue();
+    List<Doctor> findAllByTenantId(UUID tenantId);
 
-    List<Doctor> findBySpecialtyIgnoreCaseAndActiveTrue(String specialty);
+    long countByTenantId(UUID tenantId);
 
-    Optional<Doctor> findByEmailIgnoreCase(String email);
+    Optional<Doctor> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    List<Doctor> findByTenantIdAndActiveTrue(UUID tenantId);
+
+    List<Doctor> findByTenantIdAndSpecialtyIgnoreCaseAndActiveTrue(UUID tenantId, String specialty);
+
+    Optional<Doctor> findByTenantIdAndEmailIgnoreCase(UUID tenantId, String email);
 
     @Query("""
             select d from Doctor d
-            where d.active = true
+            where d.tenantId = :tenantId
+              and d.active = true
               and (lower(d.specialty) like lower(concat('%', :query, '%'))
                    or lower(d.firstName) like lower(concat('%', :query, '%'))
                    or lower(d.lastName) like lower(concat('%', :query, '%')))
             """)
-    List<Doctor> search(@Param("query") String query);
+    List<Doctor> search(@Param("tenantId") UUID tenantId, @Param("query") String query);
 }

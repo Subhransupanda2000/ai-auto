@@ -50,6 +50,12 @@ public class FaqDocument {
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    /** Set explicitly by the service layer from {@code TenantContext} on
+     * creation; every read is scoped by it via tenant-aware repository
+     * methods (see {@code FaqDocumentRepository}/{@code KnowledgeBaseServiceImpl}). */
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FaqCategory category;

@@ -1,13 +1,6 @@
 import { apiClient } from './client';
-import type { Doctor } from '../types/doctor';
+import type { Doctor, DoctorRequest } from '../types/doctor';
 
-/**
- * The backend currently only exposes read endpoints for doctors
- * (GET /api/doctors, GET /api/doctors/{id}). Create/update/delete and
- * schedule management are not yet implemented server-side; see
- * `services/doctorLocalService.ts` for the client-side fallback used by the
- * Doctors page until those endpoints ship.
- */
 export const doctorsApi = {
   list: (specialty?: string) =>
     apiClient
@@ -15,4 +8,10 @@ export const doctorsApi = {
       .then((res) => res.data),
 
   get: (id: string) => apiClient.get<Doctor>(`/doctors/${id}`).then((res) => res.data),
+
+  create: (payload: DoctorRequest) =>
+    apiClient.post<Doctor>('/doctors', payload).then((res) => res.data),
+
+  update: (id: string, payload: Partial<DoctorRequest>) =>
+    apiClient.put<Doctor>(`/doctors/${id}`, payload).then((res) => res.data),
 };

@@ -75,7 +75,15 @@ export function AppointmentsPage() {
   const handleReschedule = (values: AppointmentRequest) => {
     if (!editingAppointment) return;
     updateAppointment.mutate(
-      { id: editingAppointment.id, payload: { newStart: values.start, newEnd: values.end, reason: values.reason } },
+      {
+        id: editingAppointment.id,
+        payload: {
+          newStart: values.start,
+          newEnd: values.end,
+          reason: values.reason,
+          consultationFee: values.consultationFee,
+        },
+      },
       {
         onSuccess: () => {
           enqueueSnackbar('Appointment rescheduled', { variant: 'success' });
@@ -125,6 +133,13 @@ export function AppointmentsPage() {
       valueGetter: (value: string) => format(new Date(value), 'MMM d, yyyy h:mm a'),
     },
     { field: 'reason', headerName: 'Reason', flex: 1, minWidth: 160, valueGetter: (value) => value ?? '—' },
+    {
+      field: 'consultationFee',
+      headerName: 'Fee',
+      flex: 0.6,
+      minWidth: 110,
+      valueGetter: (value: number | null) => (value != null ? `₹${value.toLocaleString('en-IN')}` : '—'),
+    },
     {
       field: 'status',
       headerName: 'Status',

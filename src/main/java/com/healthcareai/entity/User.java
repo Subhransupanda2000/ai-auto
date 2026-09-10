@@ -42,6 +42,15 @@ public class User {
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    /** The tenant (clinic) this staff account belongs to. Deliberately a
+     * plain column, not a Hibernate {@code @TenantId}: authentication looks
+     * users up by email alone (still globally unique) before the tenant is
+     * known, so this field must never be part of the automatic tenant
+     * filter - tenant-scoped user management queries filter on it
+     * explicitly instead (see {@code UserRepository}). */
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(nullable = false, unique = true)
     private String email;
 

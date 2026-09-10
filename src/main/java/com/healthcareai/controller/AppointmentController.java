@@ -18,6 +18,8 @@ import com.healthcareai.dto.AppointmentCancelRequest;
 import com.healthcareai.dto.AppointmentRequest;
 import com.healthcareai.dto.AppointmentResponse;
 import com.healthcareai.dto.AppointmentUpdateRequest;
+import com.healthcareai.dto.RevenueRange;
+import com.healthcareai.dto.RevenueResponse;
 import com.healthcareai.entity.Appointment;
 import com.healthcareai.entity.AppointmentStatus;
 import com.healthcareai.exception.ResourceNotFoundException;
@@ -60,12 +62,20 @@ public class AppointmentController {
     @Operation(summary = "Book a new appointment.")
     public ResponseEntity<AppointmentResponse> create(@Valid @RequestBody AppointmentRequest request) {
         Appointment appointment = appointmentService.bookAppointment(
-                request.patientId(), request.doctorId(), request.start(), request.end(), request.reason());
+                request.patientId(), request.doctorId(), request.start(), request.end(), request.reason(),
+                request.consultationFee());
         return ResponseEntity.ok(appointmentMapper.toResponse(appointment));
     }
 
+    @GetMapping("/revenue")
+    @Operation(summary = "Real revenue (sum of consultation fees on completed appointments) for a rolling date range.")
+    public ResponseEntity<RevenueResponse> revenue(
+            @RequestParam(required = false, defaultValue = "TODAY") RevenueRange range) {
+        return ResponseEntity.ok(appointmentService.getRevenueSummary(range));
+    }
+
     @PutMapping("/{id}")
-    @Operation(summary = "Reschedule an appointment and/or transition its status.")
+    @Operation(summary = "Reschedule an appointment, transition its status, and/or update its consultation fee.")
     public ResponseEntity<AppointmentResponse> update(@PathVariable UUID id,
                                                         @RequestBody AppointmentUpdateRequest request) {
         Appointment appointment = appointmentService.findById(id)
@@ -78,6 +88,9 @@ public class AppointmentController {
             appointment = appointmentService.confirmAppointment(id);
         } else if (request.status() == AppointmentStatus.COMPLETED) {
             appointment = appointmentService.completeAppointment(id);
+        }
+        if (request.consultationFee() != null) {
+            appointment = appointmentService.updateConsultationFee(id, request.consultationFee());
         }
         return ResponseEntity.ok(appointmentMapper.toResponse(appointment));
     }

@@ -1,5 +1,6 @@
 package com.healthcareai.service;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -7,6 +8,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.healthcareai.dto.AvailableSlot;
+import com.healthcareai.dto.RevenueRange;
+import com.healthcareai.dto.RevenueResponse;
 import com.healthcareai.entity.Appointment;
 
 public interface AppointmentService {
@@ -18,9 +21,17 @@ public interface AppointmentService {
      */
     List<AvailableSlot> checkAvailability(UUID doctorId, LocalDate date);
 
-    Appointment bookAppointment(UUID patientId, UUID doctorId, Instant start, Instant end, String reason);
+    Appointment bookAppointment(UUID patientId, UUID doctorId, Instant start, Instant end, String reason,
+                                 BigDecimal consultationFee);
 
     Appointment rescheduleAppointment(UUID appointmentId, Instant newStart, Instant newEnd);
+
+    Appointment updateConsultationFee(UUID appointmentId, BigDecimal consultationFee);
+
+    /** Real (not estimated) revenue - the sum of {@code consultationFee}
+     * across completed appointments scheduled within the given rolling
+     * date range, for the caller's tenant. */
+    RevenueResponse getRevenueSummary(RevenueRange range);
 
     Appointment cancelAppointment(UUID appointmentId, String reason);
 

@@ -18,17 +18,10 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
-import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import { format } from 'date-fns';
 import { PageHeader } from '../../components/common/PageHeader';
-import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { PatientFormDialog } from './PatientFormDialog';
-import {
-  useCreatePatient,
-  useDeletePatient,
-  usePatients,
-  useUpdatePatient,
-} from '../../hooks/usePatients';
+import { useCreatePatient, usePatients, useUpdatePatient } from '../../hooks/usePatients';
 import type { Patient, PatientRequest } from '../../types/patient';
 
 export function PatientsPage() {
@@ -37,12 +30,10 @@ export function PatientsPage() {
   const { data: patients = [], isLoading } = usePatients();
   const createPatient = useCreatePatient();
   const updatePatient = useUpdatePatient();
-  const deletePatient = useDeletePatient();
 
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [menuPatient, setMenuPatient] = useState<Patient | null>(null);
 
@@ -126,16 +117,6 @@ export function PatientsPage() {
     );
   };
 
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    deletePatient.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        enqueueSnackbar('Patient deleted', { variant: 'success' });
-        setDeleteTarget(null);
-      },
-    });
-  };
-
   return (
     <Box>
       <PageHeader
@@ -207,15 +188,6 @@ export function PatientsPage() {
         >
           <EditRoundedIcon fontSize="small" sx={{ mr: 1.5 }} /> Edit
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            setDeleteTarget(menuPatient);
-            closeMenu();
-          }}
-          sx={{ color: 'error.main' }}
-        >
-          <DeleteRoundedIcon fontSize="small" sx={{ mr: 1.5 }} /> Delete
-        </MenuItem>
       </Menu>
 
       <PatientFormDialog
@@ -227,17 +199,6 @@ export function PatientsPage() {
           setEditingPatient(null);
         }}
         onSubmit={editingPatient ? handleUpdate : handleCreate}
-      />
-
-      <ConfirmDialog
-        open={Boolean(deleteTarget)}
-        title="Delete patient"
-        message={`Are you sure you want to delete ${deleteTarget?.firstName} ${deleteTarget?.lastName}? This action cannot be undone.`}
-        confirmLabel="Delete"
-        destructive
-        loading={deletePatient.isPending}
-        onConfirm={handleDelete}
-        onClose={() => setDeleteTarget(null)}
       />
     </Box>
   );

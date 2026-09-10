@@ -27,7 +27,8 @@ import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../store/themeStore';
 import { useAuth } from '../hooks/useAuth';
-import { SIDEBAR_WIDTH } from './Sidebar';
+import { SIDEBAR_RAIL_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
+import { useSidebarStore } from '../store/sidebarStore';
 import { NotificationsMenu } from './NotificationsMenu';
 
 interface TopBarProps {
@@ -38,8 +39,10 @@ export function TopBar({ onMenuClick }: TopBarProps) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const { mode, toggleMode } = useThemeStore();
+  const { collapsed } = useSidebarStore();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const sidebarWidth = collapsed ? SIDEBAR_RAIL_WIDTH : SIDEBAR_WIDTH;
 
   const [profileAnchor, setProfileAnchor] = useState<HTMLElement | null>(null);
   const [notifAnchor, setNotifAnchor] = useState<HTMLElement | null>(null);
@@ -57,8 +60,9 @@ export function TopBar({ onMenuClick }: TopBarProps) {
       color="inherit"
       sx={{
         bgcolor: 'background.paper',
-        width: isDesktop ? `calc(100% - ${SIDEBAR_WIDTH}px)` : '100%',
-        ml: isDesktop ? `${SIDEBAR_WIDTH}px` : 0,
+        width: isDesktop ? `calc(100% - ${sidebarWidth}px)` : '100%',
+        ml: isDesktop ? `${sidebarWidth}px` : 0,
+        transition: (theme) => theme.transitions.create(['width', 'margin']),
       }}
     >
       <Toolbar sx={{ gap: 1 }}>

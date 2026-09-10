@@ -4,6 +4,8 @@ import type {
   AppointmentCancelRequest,
   AppointmentRequest,
   AppointmentUpdateRequest,
+  RevenueRange,
+  RevenueResponse,
 } from '../types/appointment';
 
 export const appointmentsApi = {
@@ -20,4 +22,7 @@ export const appointmentsApi = {
 
   cancel: (id: string, payload?: AppointmentCancelRequest) =>
     apiClient.delete<Appointment>(`/appointments/${id}`, { data: payload }).then((res) => res.data),
+
+  revenue: (range: RevenueRange) =>
+    apiClient.get<RevenueResponse>('/appointments/revenue', { params: { range } }).then((res) => res.data),
 };

@@ -13,7 +13,12 @@ public record SeedProperties(
         int patientCount,
         int appointmentCount,
         int knowledgeBaseArticleCount,
-        int faqCount
+        int faqCount,
+        String defaultTenantName,
+        String defaultTenantSlug,
+        String defaultAdminEmail,
+        String defaultAdminPassword,
+        String defaultAdminFullName
 ) {
     public SeedProperties {
         if (doctorCount <= 0) {
@@ -30,6 +35,15 @@ public record SeedProperties(
         }
         if (faqCount <= 0) {
             faqCount = 50;
+        }
+        if (defaultTenantName == null || defaultTenantName.isBlank()) {
+            defaultTenantName = "Demo Clinic";
+        }
+        if (defaultTenantSlug == null || defaultTenantSlug.isBlank()) {
+            defaultTenantSlug = "demo-clinic";
+        }
+        if (defaultAdminFullName == null || defaultAdminFullName.isBlank()) {
+            defaultAdminFullName = "Demo Admin";
         }
     }
 }

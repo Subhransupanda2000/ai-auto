@@ -10,6 +10,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.healthcareai.tenant.TenantContext;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,20 +41,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                      @NonNull FilterChain filterChain) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
 
-        if (header != null && header.startsWith(BEARER_PREFIX) && SecurityContextHolder.getContext().getAuthentication() == null) {
-            String token = header.substring(BEARER_PREFIX.length());
-            try {
-                String email = jwtService.extractEmail(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        try {
+            if (header != null && header.startsWith(BEARER_PREFIX) && SecurityContextHolder.getContext().getAuthentication() == null) {
+                String token = header.substring(BEARER_PREFIX.length());
+                try {
+                    String email = jwtService.extractEmail(token);
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            } catch (RuntimeException e) {
-                log.debug("Ignoring invalid JWT: {}", e.getMessage());
+                    var authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                    // The tenantId claim is trusted directly from the (signature-verified)
+                    // token, avoiding an extra lookup just to scope the rest of the request.
+                    TenantContext.setCurrentTenantId(jwtService.extractTenantId(token));
+                } catch (RuntimeException e) {
+                    log.debug("Ignoring invalid JWT: {}", e.getMessage());
+                }
             }
+            filterChain.doFilter(request, response);
+        } finally {
+            // Threads are pooled, so always clear the tenant context at the end of
+            // the request regardless of outcome to avoid leaking it into whatever
+            // the next request handled by this thread happens to be.
+            TenantContext.clear();
         }
-        filterChain.doFilter(request, response);
     }
 }

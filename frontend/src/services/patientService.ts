@@ -1,9 +1,7 @@
 import { patientsApi } from '../api/patientsApi';
-import { LocalOverlayStore } from './localOverlayStore';
 import type { Patient, PatientMedicalNote, PatientRequest } from '../types/patient';
 import { generateId } from '../utils/id';
 
-const overlay = new LocalOverlayStore<Patient>('hc_patients_overlay');
 const notesKey = 'hc_patient_notes';
 
 function readNotes(): PatientMedicalNote[] {
@@ -22,32 +20,19 @@ function writeNotes(notes: PatientMedicalNote[]): void {
 
 export const patientService = {
   async list(): Promise<Patient[]> {
-    const server = await patientsApi.list();
-    return overlay.merge(server);
+    return patientsApi.list();
   },
 
   async get(id: string): Promise<Patient | undefined> {
-    const all = await patientService.list();
-    return all.find((p) => p.id === id);
+    return patientsApi.get(id);
   },
 
-  create(payload: PatientRequest): Patient {
-    return overlay.create({
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      phoneNumber: payload.phoneNumber,
-      email: payload.email ?? null,
-      dateOfBirth: payload.dateOfBirth ?? null,
-      gender: payload.gender ?? null,
-    });
+  create(payload: PatientRequest): Promise<Patient> {
+    return patientsApi.create(payload);
   },
 
-  update(id: string, payload: Partial<PatientRequest>): void {
-    overlay.update(id, payload);
-  },
-
-  remove(id: string): void {
-    overlay.remove(id);
+  update(id: string, payload: Partial<PatientRequest>): Promise<Patient> {
+    return patientsApi.update(id, payload);
   },
 
   listNotes(patientId: string): PatientMedicalNote[] {

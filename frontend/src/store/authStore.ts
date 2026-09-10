@@ -6,6 +6,7 @@ import type { AuthUser, Role } from '../types/auth';
 interface JwtClaims {
   sub: string;
   role: Role;
+  tenantName?: string;
   iss: string;
   iat: number;
   exp: number;
@@ -24,7 +25,7 @@ interface AuthState {
 function decodeUser(token: string): { user: AuthUser; expiresAt: number } {
   const claims = jwtDecode<JwtClaims>(token);
   return {
-    user: { email: claims.sub, role: claims.role },
+    user: { email: claims.sub, role: claims.role, tenantName: claims.tenantName },
     expiresAt: claims.exp * 1000,
   };
 }

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Box, Toolbar } from '@mui/material';
 import { Outlet } from 'react-router-dom';
-import { Sidebar, SIDEBAR_WIDTH } from './Sidebar';
+import { Sidebar, SIDEBAR_RAIL_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
 import { TopBar } from './TopBar';
+import { useSidebarStore } from '../store/sidebarStore';
 
 export function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { collapsed } = useSidebarStore();
+  const sidebarWidth = collapsed ? SIDEBAR_RAIL_WIDTH : SIDEBAR_WIDTH;
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -21,7 +24,8 @@ export function MainLayout() {
         sx={{
           flexGrow: 1,
           minWidth: 0,
-          width: { lg: `calc(100% - ${SIDEBAR_WIDTH}px)` },
+          width: { lg: `calc(100% - ${sidebarWidth}px)` },
+          transition: (theme) => theme.transitions.create('width'),
         }}
       >
         <TopBar onMenuClick={() => setMobileOpen(true)} />

@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.boot.CommandLineRunner;
@@ -27,10 +28,14 @@ import com.healthcareai.entity.Doctor;
 import com.healthcareai.entity.FaqCategory;
 import com.healthcareai.entity.FaqDocument;
 import com.healthcareai.entity.Patient;
+import com.healthcareai.entity.Tenant;
 import com.healthcareai.repository.AppointmentRepository;
 import com.healthcareai.repository.DoctorRepository;
 import com.healthcareai.repository.FaqDocumentRepository;
 import com.healthcareai.repository.PatientRepository;
+import com.healthcareai.repository.TenantRepository;
+import com.healthcareai.service.TenantService;
+import com.healthcareai.tenant.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +66,8 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final PatientRepository patientRepository;
     private final AppointmentRepository appointmentRepository;
     private final FaqDocumentRepository faqDocumentRepository;
+    private final TenantRepository tenantRepository;
+    private final TenantService tenantService;
     private final SeedProperties seedProperties;
     private final ClinicProperties clinicProperties;
 
@@ -71,25 +78,73 @@ public class DemoDataSeeder implements CommandLineRunner {
     public void run(String... args) {
         log.info("Demo data seed check starting (enabled via app.seed.enabled)...");
 
-        List<Doctor> doctors = ensureDoctorsSeeded();
-        List<Patient> patients = ensurePatientsSeeded();
-        ensureAppointmentsSeeded(doctors, patients);
-        ensureKnowledgeBaseSeeded(doctors);
+        Tenant tenant = ensureDefaultTenantSeeded();
 
-        BigDecimal revenue = appointmentRepository.sumConsultationFeeByStatus(AppointmentStatus.COMPLETED);
-        long completedCount = appointmentRepository.findByStatus(AppointmentStatus.COMPLETED).size();
-        log.info("Demo data seed check complete. Totals — doctors: {}, patients: {}, appointments: {}, "
-                        + "knowledge base documents: {}. Revenue from {} completed appointments: ₹{}",
-                doctorRepository.count(), patientRepository.count(), appointmentRepository.count(),
-                faqDocumentRepository.count(), completedCount, revenue);
+        // Every clinical entity created below (doctors/patients/appointments/
+        // knowledge base) is explicitly stamped with this tenant's id (see
+        // each ensure*Seeded() method), and every count()/findAll() check
+        // below is explicitly scoped to it too via TenantContext - see
+        // com.healthcareai.tenant.TenantContext.
+        TenantContext.runAs(tenant.getId(), () -> {
+            List<Doctor> doctors = ensureDoctorsSeeded();
+            List<Patient> patients = ensurePatientsSeeded();
+            ensureAppointmentsSeeded(doctors, patients);
+            ensureKnowledgeBaseSeeded(doctors);
+
+            UUID tenantId = tenant.getId();
+            BigDecimal revenue = appointmentRepository.sumConsultationFeeByTenantIdAndStatus(tenantId, AppointmentStatus.COMPLETED);
+            long completedCount = appointmentRepository.findByTenantIdAndStatus(tenantId, AppointmentStatus.COMPLETED).size();
+            log.info("Demo data seed check complete for tenant '{}'. Totals — doctors: {}, patients: {}, "
+                            + "appointments: {}, knowledge base documents: {}. Revenue from {} completed appointments: ₹{}",
+                    tenant.getSlug(), doctorRepository.countByTenantId(tenantId), patientRepository.countByTenantId(tenantId),
+                    appointmentRepository.countByTenantId(tenantId), faqDocumentRepository.countByTenantId(tenantId),
+                    completedCount, revenue);
+        });
+    }
+
+    // ----------------------------------------------------------------- tenant
+
+    private Tenant ensureDefaultTenantSeeded() {
+        return tenantRepository.findBySlugIgnoreCase(seedProperties.defaultTenantSlug())
+                .orElseGet(() -> {
+                    String adminEmail = seedProperties.defaultAdminEmail();
+                    String adminPassword = seedProperties.defaultAdminPassword();
+                    boolean generatedCredentials = isBlank(adminEmail) || isBlank(adminPassword);
+                    if (generatedCredentials) {
+                        adminEmail = isBlank(adminEmail)
+                                ? "admin@" + seedProperties.defaultTenantSlug() + ".local"
+                                : adminEmail;
+                        adminPassword = isBlank(adminPassword)
+                                ? java.util.UUID.randomUUID().toString()
+                                : adminPassword;
+                    }
+
+                    Tenant tenant = tenantService.createTenantWithAdmin(
+                            seedProperties.defaultTenantName(), seedProperties.defaultTenantSlug(),
+                            seedProperties.defaultAdminFullName(), adminEmail, adminPassword);
+
+                    if (generatedCredentials) {
+                        log.warn("Seeded default tenant '{}' with a generated admin login - email: {}, password: {}. "
+                                        + "Set SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD to control this instead.",
+                                tenant.getSlug(), adminEmail, adminPassword);
+                    } else {
+                        log.info("Seeded default tenant '{}' with admin {}.", tenant.getSlug(), adminEmail);
+                    }
+                    return tenant;
+                });
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     // ---------------------------------------------------------------- doctors
 
     private List<Doctor> ensureDoctorsSeeded() {
-        if (doctorRepository.count() > 0) {
+        UUID tenantId = TenantContext.getCurrentTenantId();
+        if (doctorRepository.countByTenantId(tenantId) > 0) {
             log.info("Doctors table already has data; skipping doctor seeding.");
-            return doctorRepository.findAll();
+            return doctorRepository.findAllByTenantId(tenantId);
         }
 
         Set<String> usedEmails = new HashSet<>();
@@ -103,6 +158,7 @@ public class DemoDataSeeder implements CommandLineRunner {
             int yearsExperience = 3 + ThreadLocalRandom.current().nextInt(28);
 
             Doctor doctor = Doctor.builder()
+                    .tenantId(tenantId)
                     .firstName(firstName)
                     .lastName(lastName)
                     .specialty(specialty)
@@ -125,9 +181,10 @@ public class DemoDataSeeder implements CommandLineRunner {
     // --------------------------------------------------------------- patients
 
     private List<Patient> ensurePatientsSeeded() {
-        if (patientRepository.count() > 0) {
+        UUID tenantId = TenantContext.getCurrentTenantId();
+        if (patientRepository.countByTenantId(tenantId) > 0) {
             log.info("Patients table already has data; skipping patient seeding.");
-            return patientRepository.findAll();
+            return patientRepository.findAllByTenantId(tenantId);
         }
 
         Set<String> usedPhones = new HashSet<>();
@@ -140,6 +197,7 @@ public class DemoDataSeeder implements CommandLineRunner {
             boolean hasEmail = ThreadLocalRandom.current().nextInt(100) < 85;
 
             Patient patient = Patient.builder()
+                    .tenantId(tenantId)
                     .firstName(firstName)
                     .lastName(lastName)
                     .email(hasEmail ? generator.uniqueEmail(firstName, lastName, usedEmails) : null)
@@ -159,7 +217,8 @@ public class DemoDataSeeder implements CommandLineRunner {
     // ----------------------------------------------------------- appointments
 
     private void ensureAppointmentsSeeded(List<Doctor> doctors, List<Patient> patients) {
-        if (appointmentRepository.count() > 0) {
+        UUID tenantId = TenantContext.getCurrentTenantId();
+        if (appointmentRepository.countByTenantId(tenantId) > 0) {
             log.info("Appointments table already has data; skipping appointment seeding.");
             return;
         }
@@ -195,6 +254,7 @@ public class DemoDataSeeder implements CommandLineRunner {
             AppointmentStatus status = randomStatusFor(startInstant, now, random);
 
             Appointment appointment = Appointment.builder()
+                    .tenantId(tenantId)
                     .patient(patient)
                     .doctor(doctor)
                     .scheduledStart(startInstant)
@@ -285,7 +345,7 @@ public class DemoDataSeeder implements CommandLineRunner {
     // ------------------------------------------------------------ knowledge base
 
     private void ensureKnowledgeBaseSeeded(List<Doctor> doctors) {
-        if (faqDocumentRepository.count() > 0) {
+        if (faqDocumentRepository.countByTenantId(TenantContext.getCurrentTenantId()) > 0) {
             log.info("Knowledge base table already has data; skipping knowledge base/FAQ seeding.");
             return;
         }
@@ -339,6 +399,7 @@ public class DemoDataSeeder implements CommandLineRunner {
 
     private FaqDocument toFaqDocument(FaqCategory category, DemoDataGenerator.KnowledgeArticle article) {
         return FaqDocument.builder()
+                .tenantId(TenantContext.getCurrentTenantId())
                 .category(category)
                 .title(article.title())
                 .content(article.content())

@@ -43,14 +43,6 @@ export function useUpdatePatient() {
   });
 }
 
-export function useDeletePatient() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => patientService.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.patients }),
-  });
-}
-
 export function useAddPatientNote() {
   const queryClient = useQueryClient();
   return useMutation({

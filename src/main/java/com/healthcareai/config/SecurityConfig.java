@@ -16,14 +16,19 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.healthcareai.security.JwtAuthenticationFilter;
+import com.healthcareai.security.superadmin.SuperAdminAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
 
 /**
- * Stateless JWT-based security configuration. The AI receptionist chat and
- * public documentation endpoints are open; appointment/patient/doctor
- * management endpoints require authentication and are further restricted
- * by role via method-level {@code @PreAuthorize} annotations.
+ * Stateless JWT-based security configuration. Public documentation
+ * endpoints are open; staff (patient/doctor/appointment/chat) endpoints
+ * require authentication and are restricted by role via
+ * {@code requestMatchers(...).hasAnyRole(...)}. Super-admin endpoints
+ * ({@code /api/super-admin/**}, tenant onboarding) are a fully separate
+ * concern secured by {@link SuperAdminAuthenticationFilter} and
+ * {@code ROLE_SUPER_ADMIN} - a super admin has no tenant and never touches
+ * clinic data, and a staff member's token is never accepted there.
  */
 @Configuration
 @EnableMethodSecurity
@@ -31,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SuperAdminAuthenticationFilter superAdminAuthenticationFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -57,15 +63,31 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        // More specific than the /api/auth/** permitAll below: changing
+                        // your own password always requires being logged in as someone.
+                        .requestMatchers("/api/auth/change-password").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/chat").permitAll()
+                        .requestMatchers("/api/super-admin/auth/**").permitAll()
+                        .requestMatchers("/api/super-admin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        // Stays public: used both by the authenticated in-app "Ask AI
+                        // Assistant" page (tenant resolved from the JWT, same as any other
+                        // staff endpoint) and by anonymous patient-facing channels
+                        // (WhatsApp/SMS/web widget) that have no staff login at all. See
+                        // ChatController for how it resolves the tenant in the anonymous
+                        // case (a required tenantSlug on the request).
+                        .requestMatchers("/api/chat").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/patients/**", "/api/doctors/**", "/api/appointments/**")
                             .hasAnyRole("ADMIN", "DOCTOR", "RECEPTIONIST")
+                        // Non-GET (create/update): registering or editing patients/doctors
+                        // is front-desk/admin work, not something a doctor does themselves.
+                        .requestMatchers("/api/patients/**").hasAnyRole("ADMIN", "RECEPTIONIST")
+                        .requestMatchers("/api/doctors/**").hasRole("ADMIN")
                         .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "RECEPTIONIST")
                         .anyRequest().authenticated())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(superAdminAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

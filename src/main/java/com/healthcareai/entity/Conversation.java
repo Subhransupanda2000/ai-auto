@@ -48,6 +48,12 @@ public class Conversation {
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    /** Set explicitly by the service layer from {@code TenantContext} on
+     * creation; every read is scoped by it via tenant-aware repository
+     * methods (see {@code ConversationRepository}/{@code ConversationServiceImpl}). */
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "session_id", nullable = false)
     private String sessionId;
 

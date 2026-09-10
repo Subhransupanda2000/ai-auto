@@ -138,7 +138,9 @@ public class CalendarTool implements ToolProvider {
         Instant end = ToolArguments.requiredInstant(args, "end");
         String reason = ToolArguments.optionalString(args, "reason");
 
-        Appointment appointment = appointmentService.bookAppointment(patientId, doctorId, start, end, reason);
+        // The AI receptionist never sets a consultation fee; that's entered
+        // by staff (see AppointmentFormDialog / AppointmentUpdateRequest).
+        Appointment appointment = appointmentService.bookAppointment(patientId, doctorId, start, end, reason, null);
         syncCreatedEvent(appointment);
         return objectMapper.writeValueAsString(AppointmentSummary.from(appointment));
     }

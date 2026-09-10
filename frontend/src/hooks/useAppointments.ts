@@ -5,6 +5,7 @@ import type {
   AppointmentCancelRequest,
   AppointmentRequest,
   AppointmentUpdateRequest,
+  RevenueRange,
 } from '../types/appointment';
 
 export function useAppointments(filters?: { patientId?: string; doctorId?: string }) {
@@ -14,11 +15,20 @@ export function useAppointments(filters?: { patientId?: string; doctorId?: strin
   });
 }
 
+export function useRevenue(range: RevenueRange) {
+  return useQuery({
+    queryKey: ['appointments', 'revenue', range],
+    queryFn: () => appointmentsApi.revenue(range),
+  });
+}
+
 export function useCreateAppointment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: AppointmentRequest) => appointmentsApi.create(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['appointments'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
   });
 }
 
@@ -27,7 +37,9 @@ export function useUpdateAppointment() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: AppointmentUpdateRequest }) =>
       appointmentsApi.update(id, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['appointments'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
   });
 }
 
@@ -36,6 +48,8 @@ export function useCancelAppointment() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload?: AppointmentCancelRequest }) =>
       appointmentsApi.cancel(id, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['appointments'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
   });
 }

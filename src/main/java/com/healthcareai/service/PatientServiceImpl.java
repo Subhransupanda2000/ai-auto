@@ -12,6 +12,7 @@ import org.springframework.util.StringUtils;
 import com.healthcareai.entity.Patient;
 import com.healthcareai.exception.ResourceNotFoundException;
 import com.healthcareai.repository.PatientRepository;
+import com.healthcareai.tenant.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ public class PatientServiceImpl implements PatientService {
     public Patient createPatient(String firstName, String lastName, String phoneNumber, String email,
                                   LocalDate dateOfBirth, String gender, String notes) {
         Patient patient = Patient.builder()
+                .tenantId(TenantContext.getCurrentTenantId())
                 .firstName(firstName)
                 .lastName(lastName)
                 .phoneNumber(phoneNumber)
@@ -44,7 +46,7 @@ public class PatientServiceImpl implements PatientService {
     @Override
     @Transactional
     public Patient updatePatient(UUID id, String firstName, String lastName, String email, String gender, String notes) {
-        Patient patient = patientRepository.findById(id)
+        Patient patient = patientRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Patient", id));
         if (StringUtils.hasText(firstName)) {
             patient.setFirstName(firstName);
@@ -67,19 +69,19 @@ public class PatientServiceImpl implements PatientService {
     @Override
     @Transactional(readOnly = true)
     public Optional<Patient> findById(UUID id) {
-        return patientRepository.findById(id);
+        return patientRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId());
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<Patient> findByPhoneNumber(String phoneNumber) {
-        return patientRepository.findByPhoneNumber(phoneNumber);
+        return patientRepository.findByTenantIdAndPhoneNumber(TenantContext.getCurrentTenantId(), phoneNumber);
     }
 
     @Override
     @Transactional
     public Patient findOrCreateByPhoneNumber(String phoneNumber, String fallbackFirstName) {
-        return patientRepository.findByPhoneNumber(phoneNumber)
+        return patientRepository.findByTenantIdAndPhoneNumber(TenantContext.getCurrentTenantId(), phoneNumber)
                 .orElseGet(() -> createPatient(
                         StringUtils.hasText(fallbackFirstName) ? fallbackFirstName : "Unknown",
                         "Patient",
@@ -93,6 +95,6 @@ public class PatientServiceImpl implements PatientService {
     @Override
     @Transactional(readOnly = true)
     public List<Patient> findAll() {
-        return patientRepository.findAll();
+        return patientRepository.findAllByTenantId(TenantContext.getCurrentTenantId());
     }
 }

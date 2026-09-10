@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -56,7 +57,7 @@ class KnowledgeBaseServiceImplTest {
     @Test
     void upsertDocument_throwsNotFound_whenIdDoesNotExist() {
         UUID id = UUID.randomUUID();
-        when(faqDocumentRepository.findById(id)).thenReturn(Optional.empty());
+        when(faqDocumentRepository.findByIdAndTenantId(eq(id), nullable(UUID.class))).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> knowledgeBaseService.upsertDocument(id, FaqCategory.FAQ, "t", "c", "s"))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -67,7 +68,7 @@ class KnowledgeBaseServiceImplTest {
         float[] embedding = new float[]{0.5f};
         when(geminiClient.createEmbedding("clinic hours")).thenReturn(embedding);
         FaqDocument doc = FaqDocument.builder().category(FaqCategory.CLINIC_TIMINGS).title("Hours").content("9-5").build();
-        when(faqDocumentRepository.findMostSimilar(eq(embedding), any())).thenReturn(List.of(doc));
+        when(faqDocumentRepository.findMostSimilar(nullable(UUID.class), eq(embedding), any())).thenReturn(List.of(doc));
 
         List<FaqDocument> results = knowledgeBaseService.retrieveRelevant("clinic hours", 3);
 

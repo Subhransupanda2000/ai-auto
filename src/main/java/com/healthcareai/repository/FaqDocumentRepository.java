@@ -1,6 +1,7 @@
 package com.healthcareai.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Pageable;
@@ -19,25 +20,33 @@ import com.healthcareai.entity.FaqDocument;
  */
 public interface FaqDocumentRepository extends JpaRepository<FaqDocument, UUID> {
 
-    List<FaqDocument> findByCategoryAndActiveTrue(FaqCategory category);
+    List<FaqDocument> findByTenantIdAndCategoryAndActiveTrue(UUID tenantId, FaqCategory category);
+
+    Optional<FaqDocument> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    long countByTenantId(UUID tenantId);
 
     /**
-     * Returns the {@code pageable}-limited most similar active documents to
-     * the given query embedding, ordered from most to least similar.
+     * Returns the {@code pageable}-limited most similar active documents
+     * (within this tenant's knowledge base) to the given query embedding,
+     * ordered from most to least similar.
      */
     @Query("""
             select f from FaqDocument f
-            where f.active = true and f.embedding is not null
+            where f.tenantId = :tenantId and f.active = true and f.embedding is not null
             order by cosine_distance(f.embedding, :queryEmbedding) asc
             """)
-    List<FaqDocument> findMostSimilar(@Param("queryEmbedding") float[] queryEmbedding, Pageable pageable);
+    List<FaqDocument> findMostSimilar(@Param("tenantId") UUID tenantId,
+                                       @Param("queryEmbedding") float[] queryEmbedding,
+                                       Pageable pageable);
 
     @Query("""
             select f from FaqDocument f
-            where f.active = true and f.embedding is not null and f.category = :category
+            where f.tenantId = :tenantId and f.active = true and f.embedding is not null and f.category = :category
             order by cosine_distance(f.embedding, :queryEmbedding) asc
             """)
-    List<FaqDocument> findMostSimilarByCategory(@Param("queryEmbedding") float[] queryEmbedding,
+    List<FaqDocument> findMostSimilarByCategory(@Param("tenantId") UUID tenantId,
+                                                 @Param("queryEmbedding") float[] queryEmbedding,
                                                  @Param("category") FaqCategory category,
                                                  Pageable pageable);
 }

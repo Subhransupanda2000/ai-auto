@@ -117,7 +117,7 @@ public class AppointmentTool implements ToolProvider {
         var end = ToolArguments.requiredInstant(args, "end");
         String reason = ToolArguments.optionalString(args, "reason");
 
-        Appointment appointment = appointmentService.bookAppointment(patientId, doctorId, start, end, reason);
+        Appointment appointment = appointmentService.bookAppointment(patientId, doctorId, start, end, reason, null);
         return objectMapper.writeValueAsString(AppointmentView.from(appointment));
     }
 

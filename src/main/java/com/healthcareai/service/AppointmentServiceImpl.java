@@ -1,5 +1,6 @@
 package com.healthcareai.service;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,6 +18,8 @@ import org.springframework.util.StringUtils;
 
 import com.healthcareai.config.ClinicProperties;
 import com.healthcareai.dto.AvailableSlot;
+import com.healthcareai.dto.RevenueRange;
+import com.healthcareai.dto.RevenueResponse;
 import com.healthcareai.entity.Appointment;
 import com.healthcareai.entity.AppointmentStatus;
 import com.healthcareai.entity.Doctor;
@@ -27,6 +30,7 @@ import com.healthcareai.exception.ResourceNotFoundException;
 import com.healthcareai.repository.AppointmentRepository;
 import com.healthcareai.repository.DoctorRepository;
 import com.healthcareai.repository.PatientRepository;
+import com.healthcareai.tenant.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,14 +51,15 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(readOnly = true)
     public List<AvailableSlot> checkAvailability(UUID doctorId, LocalDate date) {
-        doctorRepository.findById(doctorId).orElseThrow(() -> ResourceNotFoundException.of("Doctor", doctorId));
+        UUID tenantId = TenantContext.getCurrentTenantId();
+        doctorRepository.findByIdAndTenantId(doctorId, tenantId).orElseThrow(() -> ResourceNotFoundException.of("Doctor", doctorId));
 
         ZoneId zone = ZoneId.of(clinicProperties.timezone());
         Instant dayStart = date.atStartOfDay(zone).toInstant();
         Instant dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant();
 
         List<Appointment> existing = appointmentRepository.findByDoctorAndDateRange(
-                doctorId, dayStart, dayEnd, AppointmentStatus.CANCELLED);
+                tenantId, doctorId, dayStart, dayEnd, AppointmentStatus.CANCELLED);
 
         Duration slotDuration = Duration.ofMinutes(clinicProperties.appointmentSlotMinutes());
         List<AvailableSlot> slots = new ArrayList<>();
@@ -79,23 +84,27 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional
-    public Appointment bookAppointment(UUID patientId, UUID doctorId, Instant start, Instant end, String reason) {
+    public Appointment bookAppointment(UUID patientId, UUID doctorId, Instant start, Instant end, String reason,
+                                        BigDecimal consultationFee) {
         if (!end.isAfter(start)) {
             throw new BusinessRuleViolationException("Appointment end time must be after the start time.");
         }
-        Patient patient = patientRepository.findById(patientId)
+        UUID tenantId = TenantContext.getCurrentTenantId();
+        Patient patient = patientRepository.findByIdAndTenantId(patientId, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Patient", patientId));
-        Doctor doctor = doctorRepository.findById(doctorId)
+        Doctor doctor = doctorRepository.findByIdAndTenantId(doctorId, tenantId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Doctor", doctorId));
 
         assertNoOverlap(doctorId, start, end, null);
 
         Appointment appointment = Appointment.builder()
+                .tenantId(tenantId)
                 .patient(patient)
                 .doctor(doctor)
                 .scheduledStart(start)
                 .scheduledEnd(end)
                 .reason(reason)
+                .consultationFee(consultationFee)
                 .status(AppointmentStatus.SCHEDULED)
                 .build();
 
@@ -125,8 +134,45 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional
+    public Appointment updateConsultationFee(UUID appointmentId, BigDecimal consultationFee) {
+        Appointment appointment = appointmentRepository.findWithPatientAndDoctorByIdAndTenantId(appointmentId, TenantContext.getCurrentTenantId())
+                .orElseThrow(() -> ResourceNotFoundException.of("Appointment", appointmentId));
+        appointment.setConsultationFee(consultationFee);
+        return appointmentRepository.save(appointment);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RevenueResponse getRevenueSummary(RevenueRange range) {
+        UUID tenantId = TenantContext.getCurrentTenantId();
+        ZoneId zone = resolveZone();
+        LocalDate today = LocalDate.now(zone);
+
+        LocalDate startDate = switch (range) {
+            case TODAY -> today;
+            case YESTERDAY -> today.minusDays(1);
+            case LAST_7_DAYS -> today.minusDays(6);
+            case LAST_MONTH -> today.minusMonths(1).plusDays(1);
+            case LAST_6_MONTHS -> today.minusMonths(6).plusDays(1);
+            case LAST_YEAR -> today.minusYears(1).plusDays(1);
+        };
+        LocalDate endDateExclusive = range == RevenueRange.YESTERDAY ? today : today.plusDays(1);
+
+        Instant from = startDate.atStartOfDay(zone).toInstant();
+        Instant to = endDateExclusive.atStartOfDay(zone).toInstant();
+
+        BigDecimal total = appointmentRepository.sumConsultationFeeByTenantIdAndStatusAndScheduledStartBetween(
+                tenantId, AppointmentStatus.COMPLETED, from, to);
+        long completedCount = appointmentRepository.countByTenantIdAndStatusAndScheduledStartGreaterThanEqualAndScheduledStartLessThan(
+                tenantId, AppointmentStatus.COMPLETED, from, to);
+
+        return new RevenueResponse(range, total, completedCount, from, to);
+    }
+
+    @Override
+    @Transactional
     public Appointment cancelAppointment(UUID appointmentId, String reason) {
-        Appointment appointment = appointmentRepository.findWithPatientAndDoctorById(appointmentId)
+        Appointment appointment = appointmentRepository.findWithPatientAndDoctorByIdAndTenantId(appointmentId, TenantContext.getCurrentTenantId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Appointment", appointmentId));
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
             throw new BusinessRuleViolationException("Appointment is already cancelled.");
@@ -163,7 +209,10 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public Appointment markReminderSent(UUID appointmentId) {
-        Appointment appointment = appointmentRepository.findWithPatientAndDoctorById(appointmentId)
+        // Not tenant-scoped: only ever called by AppointmentReminderScheduler,
+        // a background job with no request/tenant context, for an id it just
+        // read from the (intentionally cross-tenant) findDueForReminder sweep.
+        Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Appointment", appointmentId));
         appointment.setReminderSentAt(Instant.now());
         return appointmentRepository.save(appointment);
@@ -172,7 +221,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public Appointment markConfirmationSent(UUID appointmentId, String googleCalendarEventId) {
-        Appointment appointment = appointmentRepository.findWithPatientAndDoctorById(appointmentId)
+        Appointment appointment = appointmentRepository.findWithPatientAndDoctorByIdAndTenantId(appointmentId, TenantContext.getCurrentTenantId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Appointment", appointmentId));
         appointment.setConfirmationSentAt(Instant.now());
         if (StringUtils.hasText(googleCalendarEventId)) {
@@ -184,37 +233,47 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(readOnly = true)
     public Optional<Appointment> findById(UUID id) {
-        return appointmentRepository.findWithPatientAndDoctorById(id);
+        return appointmentRepository.findWithPatientAndDoctorByIdAndTenantId(id, TenantContext.getCurrentTenantId());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Appointment> findByPatient(UUID patientId) {
-        return appointmentRepository.findByPatientIdOrderByScheduledStartDesc(patientId);
+        return appointmentRepository.findByTenantIdAndPatientIdOrderByScheduledStartDesc(TenantContext.getCurrentTenantId(), patientId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Appointment> findByDoctor(UUID doctorId) {
-        return appointmentRepository.findByDoctorIdOrderByScheduledStartDesc(doctorId);
+        return appointmentRepository.findByTenantIdAndDoctorIdOrderByScheduledStartDesc(TenantContext.getCurrentTenantId(), doctorId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Appointment> findAll() {
-        return appointmentRepository.findAllWithPatientAndDoctor();
+        return appointmentRepository.findAllWithPatientAndDoctor(TenantContext.getCurrentTenantId());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Appointment> findDueForReminder() {
+        // Intentionally cross-tenant - see AppointmentRepository.findDueForReminder.
         Instant now = Instant.now();
         Instant reminderWindowEnd = now.plus(Duration.ofHours(clinicProperties.reminderHoursBefore()));
         return appointmentRepository.findDueForReminder(now, reminderWindowEnd, ACTIVE_REMINDER_STATUSES);
     }
 
+    private ZoneId resolveZone() {
+        try {
+            return ZoneId.of(clinicProperties.timezone());
+        } catch (Exception e) {
+            log.warn("Invalid clinic timezone '{}', falling back to UTC.", clinicProperties.timezone());
+            return ZoneId.of("UTC");
+        }
+    }
+
     private Appointment getActiveAppointmentOrThrow(UUID appointmentId) {
-        Appointment appointment = appointmentRepository.findWithPatientAndDoctorById(appointmentId)
+        Appointment appointment = appointmentRepository.findWithPatientAndDoctorByIdAndTenantId(appointmentId, TenantContext.getCurrentTenantId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Appointment", appointmentId));
         if (appointment.getStatus() == AppointmentStatus.CANCELLED
                 || appointment.getStatus() == AppointmentStatus.COMPLETED) {
@@ -225,7 +284,8 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     private void assertNoOverlap(UUID doctorId, Instant start, Instant end, UUID excludingAppointmentId) {
-        List<Appointment> overlapping = appointmentRepository.findOverlapping(doctorId, start, end, AppointmentStatus.CANCELLED);
+        List<Appointment> overlapping = appointmentRepository.findOverlapping(
+                TenantContext.getCurrentTenantId(), doctorId, start, end, AppointmentStatus.CANCELLED);
         boolean conflict = overlapping.stream().anyMatch(a -> !a.getId().equals(excludingAppointmentId));
         if (conflict) {
             throw new AppointmentConflictException(

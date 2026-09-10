@@ -41,6 +41,13 @@ public class AuditLog {
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    /** The tenant this action was performed within, or {@code null} for
+     * platform-level (super admin) actions such as onboarding a tenant.
+     * Plain column (not a Hibernate {@code @TenantId}): audit logs
+     * legitimately span both tenant-scoped and cross-tenant entries. */
+    @Column(name = "tenant_id")
+    private UUID tenantId;
+
     /** Email of the acting user, or a system actor such as {@code "AI_AGENT"}. */
     @Column(nullable = false)
     private String actor;

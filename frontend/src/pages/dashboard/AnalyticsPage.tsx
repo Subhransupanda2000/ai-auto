@@ -44,9 +44,9 @@ export function AnalyticsPage() {
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <Card>
-            <CardHeader title="Revenue trend (estimated)" titleTypographyProps={{ variant: 'subtitle1' }} />
+            <CardHeader title="Revenue trend" titleTypographyProps={{ variant: 'subtitle1' }} />
             <CardContent sx={{ pt: 0 }}>
-              <TrendAreaChart data={revenueTrend} color="#22A06B" valuePrefix="$" height={280} />
+              <TrendAreaChart data={revenueTrend} color="#22A06B" valuePrefix="₹" height={280} />
             </CardContent>
           </Card>
         </Grid>

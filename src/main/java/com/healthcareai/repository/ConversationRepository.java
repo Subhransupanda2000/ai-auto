@@ -10,13 +10,13 @@ import com.healthcareai.entity.Conversation;
 
 public interface ConversationRepository extends JpaRepository<Conversation, UUID> {
 
-    List<Conversation> findBySessionIdOrderByCreatedAtAsc(String sessionId);
+    List<Conversation> findByTenantIdAndSessionIdOrderByCreatedAtAsc(UUID tenantId, String sessionId);
 
     /**
      * Returns the most recent messages for a session (used to build bounded
      * conversation context for the LLM), most-recent-first.
      */
-    List<Conversation> findBySessionIdOrderByCreatedAtDesc(String sessionId, Pageable pageable);
+    List<Conversation> findByTenantIdAndSessionIdOrderByCreatedAtDesc(UUID tenantId, String sessionId, Pageable pageable);
 
-    List<Conversation> findByPatientIdOrderByCreatedAtDesc(UUID patientId);
+    List<Conversation> findByTenantIdAndPatientIdOrderByCreatedAtDesc(UUID tenantId, UUID patientId);
 }

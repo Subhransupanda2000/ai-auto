@@ -14,6 +14,7 @@ import com.healthcareai.entity.Conversation;
 import com.healthcareai.entity.MessageRole;
 import com.healthcareai.repository.ConversationRepository;
 import com.healthcareai.repository.PatientRepository;
+import com.healthcareai.tenant.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,7 +29,9 @@ public class ConversationServiceImpl implements ConversationService {
     @Transactional
     public Conversation logMessage(String sessionId, Channel channel, MessageRole role, String message,
                                     Map<String, Object> metadata, UUID patientId) {
+        UUID tenantId = TenantContext.getCurrentTenantId();
         Conversation.ConversationBuilder builder = Conversation.builder()
+                .tenantId(tenantId)
                 .sessionId(sessionId)
                 .channel(channel)
                 .role(role)
@@ -36,7 +39,7 @@ public class ConversationServiceImpl implements ConversationService {
                 .metadata(metadata);
 
         if (patientId != null) {
-            patientRepository.findById(patientId).ifPresent(builder::patient);
+            patientRepository.findByIdAndTenantId(patientId, tenantId).ifPresent(builder::patient);
         }
         return conversationRepository.save(builder.build());
     }
@@ -44,14 +47,14 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     @Transactional(readOnly = true)
     public List<Conversation> getHistory(String sessionId) {
-        return conversationRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
+        return conversationRepository.findByTenantIdAndSessionIdOrderByCreatedAtAsc(TenantContext.getCurrentTenantId(), sessionId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Conversation> getRecentContext(String sessionId, int maxMessages) {
-        List<Conversation> mostRecentFirst = conversationRepository.findBySessionIdOrderByCreatedAtDesc(
-                sessionId, PageRequest.of(0, Math.max(maxMessages, 1)));
+        List<Conversation> mostRecentFirst = conversationRepository.findByTenantIdAndSessionIdOrderByCreatedAtDesc(
+                TenantContext.getCurrentTenantId(), sessionId, PageRequest.of(0, Math.max(maxMessages, 1)));
         Collections.reverse(mostRecentFirst);
         return mostRecentFirst;
     }
@@ -69,6 +72,6 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     @Transactional(readOnly = true)
     public List<Conversation> findByPatient(UUID patientId) {
-        return conversationRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
+        return conversationRepository.findByTenantIdAndPatientIdOrderByCreatedAtDesc(TenantContext.getCurrentTenantId(), patientId);
     }
 }

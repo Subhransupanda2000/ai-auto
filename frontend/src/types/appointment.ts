@@ -17,6 +17,7 @@ export interface Appointment {
   status: AppointmentStatus;
   reason: string | null;
   notes: string | null;
+  consultationFee: number | null;
 }
 
 export interface AppointmentRequest {
@@ -25,6 +26,7 @@ export interface AppointmentRequest {
   start: string;
   end: string;
   reason?: string;
+  consultationFee?: number | null;
 }
 
 export interface AppointmentUpdateRequest {
@@ -32,6 +34,7 @@ export interface AppointmentUpdateRequest {
   newEnd?: string;
   reason?: string;
   status?: AppointmentStatus;
+  consultationFee?: number | null;
 }
 
 export interface AppointmentCancelRequest {
@@ -41,4 +44,14 @@ export interface AppointmentCancelRequest {
 export interface AvailableSlot {
   start: string;
   end: string;
+}
+
+export type RevenueRange = 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'LAST_MONTH' | 'LAST_6_MONTHS' | 'LAST_YEAR';
+
+export interface RevenueResponse {
+  range: RevenueRange;
+  totalRevenue: number;
+  completedAppointments: number;
+  rangeStart: string;
+  rangeEnd: string;
 }

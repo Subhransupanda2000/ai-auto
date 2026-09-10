@@ -29,4 +29,25 @@ export interface AuthUser {
   email: string;
   role: Role;
   fullName?: string;
+  /** The caller's own clinic name, decoded from the JWT - used to brand
+   * the post-login UI (sidebar, etc.) per tenant instead of a static name. */
+  tenantName?: string;
+}
+
+export interface MessageResponse {
+  message: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }

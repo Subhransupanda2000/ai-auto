@@ -12,6 +12,7 @@ import com.healthcareai.entity.FaqDocument;
 import com.healthcareai.exception.ResourceNotFoundException;
 import com.healthcareai.integration.GeminiClient;
 import com.healthcareai.repository.FaqDocumentRepository;
+import com.healthcareai.tenant.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,9 +28,10 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     @Override
     @Transactional
     public FaqDocument upsertDocument(UUID id, FaqCategory category, String title, String content, String source) {
+        UUID tenantId = TenantContext.getCurrentTenantId();
         FaqDocument document = (id != null)
-                ? faqDocumentRepository.findById(id).orElseThrow(() -> ResourceNotFoundException.of("FaqDocument", id))
-                : FaqDocument.builder().build();
+                ? faqDocumentRepository.findByIdAndTenantId(id, tenantId).orElseThrow(() -> ResourceNotFoundException.of("FaqDocument", id))
+                : FaqDocument.builder().tenantId(tenantId).build();
 
         document.setCategory(category);
         document.setTitle(title);
@@ -46,7 +48,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     @Override
     @Transactional
     public void deactivateDocument(UUID id) {
-        FaqDocument document = faqDocumentRepository.findById(id)
+        FaqDocument document = faqDocumentRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenantId())
                 .orElseThrow(() -> ResourceNotFoundException.of("FaqDocument", id));
         document.setActive(false);
         faqDocumentRepository.save(document);
@@ -56,13 +58,14 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     @Transactional(readOnly = true)
     public List<FaqDocument> retrieveRelevant(String query, int maxResults) {
         float[] queryEmbedding = geminiClient.createEmbedding(query);
-        return faqDocumentRepository.findMostSimilar(queryEmbedding, PageRequest.of(0, maxResults));
+        return faqDocumentRepository.findMostSimilar(TenantContext.getCurrentTenantId(), queryEmbedding, PageRequest.of(0, maxResults));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<FaqDocument> retrieveRelevant(String query, FaqCategory category, int maxResults) {
         float[] queryEmbedding = geminiClient.createEmbedding(query);
-        return faqDocumentRepository.findMostSimilarByCategory(queryEmbedding, category, PageRequest.of(0, maxResults));
+        return faqDocumentRepository.findMostSimilarByCategory(
+                TenantContext.getCurrentTenantId(), queryEmbedding, category, PageRequest.of(0, maxResults));
     }
 }

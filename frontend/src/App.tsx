@@ -1,5 +1,5 @@
 import { CssBaseline, ThemeProvider } from '@mui/material';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
@@ -8,16 +8,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { buildTheme } from './theme/theme';
 import { useThemeStore } from './store/themeStore';
 import { AppRoutes } from './routes';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+import { queryClient } from './lib/queryClient';
 
 function App() {
   const mode = useThemeStore((state) => state.mode);

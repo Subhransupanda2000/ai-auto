@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiError } from '../types/common';
 import { useAuthStore } from '../store/authStore';
+import { queryClient } from '../lib/queryClient';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
@@ -24,6 +25,10 @@ apiClient.interceptors.response.use(
   (error: AxiosError<{ message?: string; error?: string; details?: string[] }>) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
+      // Prevents stale cross-session/cross-tenant data (patients, doctors,
+      // appointments, ...) from lingering and being shown to whoever logs
+      // in next in this browser tab.
+      queryClient.clear();
     }
 
     const apiError: ApiError = {

@@ -43,6 +43,12 @@ public class Doctor {
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    /** Set explicitly by the service layer from {@code TenantContext} on
+     * creation; every read is scoped by it via tenant-aware repository
+     * methods (see {@code DoctorRepository}/{@code DoctorServiceImpl}). */
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;

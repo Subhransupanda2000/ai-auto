@@ -16,8 +16,10 @@ import com.healthcareai.ai.ChatMessage;
 import com.healthcareai.dto.ChatRequest;
 import com.healthcareai.dto.ChatResponse;
 import com.healthcareai.entity.Conversation;
+import com.healthcareai.entity.Tenant;
 import com.healthcareai.integration.GeminiClient;
 import com.healthcareai.repository.ConversationRepository;
+import com.healthcareai.service.TenantService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,6 +35,8 @@ class ChatControllerIntegrationTest extends AbstractIntegrationTest {
     private TestRestTemplate restTemplate;
     @Autowired
     private ConversationRepository conversationRepository;
+    @Autowired
+    private TenantService tenantService;
 
     @MockBean
     private GeminiClient geminiClient;
@@ -43,15 +47,21 @@ class ChatControllerIntegrationTest extends AbstractIntegrationTest {
                 .thenReturn(new ChatCompletionResult(ChatMessage.assistant("Our clinic is open 9am-5pm, Monday to Friday."), "stop"));
         when(geminiClient.createEmbedding(any())).thenReturn(new float[1536]);
 
+        // An anonymous chat request (no staff login) must say which clinic
+        // it belongs to via tenantSlug.
+        String slug = "test-clinic-" + System.nanoTime();
+        Tenant tenant = tenantService.createTenantWithAdmin("Test Clinic", slug, "Admin User",
+                "admin+" + System.nanoTime() + "@example.com", "SuperSecret123");
+
         String sessionId = "session-" + UUID.randomUUID();
-        ChatRequest request = new ChatRequest(sessionId, "What are your opening hours?", null, null);
+        ChatRequest request = new ChatRequest(sessionId, "What are your opening hours?", null, null, slug);
 
         ResponseEntity<ChatResponse> response = restTemplate.postForEntity("/api/chat", request, ChatResponse.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().reply()).contains("9am-5pm");
 
-        List<Conversation> history = conversationRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
+        List<Conversation> history = conversationRepository.findByTenantIdAndSessionIdOrderByCreatedAtAsc(tenant.getId(), sessionId);
         assertThat(history).hasSize(2);
         assertThat(history.get(0).getMessage()).isEqualTo("What are your opening hours?");
         assertThat(history.get(1).getMessage()).contains("9am-5pm");

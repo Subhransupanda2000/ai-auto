@@ -30,7 +30,14 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendEmail(String toEmail, String subject, String body) {
         if (fromAddress == null || fromAddress.isBlank()) {
-            log.info("Email integration not configured (spring.mail.username is empty); skipping email to {}", toEmail);
+            // Dev-only fallback: with no SMTP credentials configured
+            // (spring.mail.username / MAIL_USERNAME), there's no way to
+            // actually deliver this, so print it in full instead of
+            // silently dropping it - this is the only way to get e.g. a
+            // password reset link without setting up a real mail provider.
+            log.info("Email integration not configured (spring.mail.username is empty); "
+                            + "printing email instead of sending it.\nTo: {}\nSubject: {}\n\n{}\n",
+                    toEmail, subject, body);
             return;
         }
         try {

@@ -41,6 +41,12 @@ public class Patient {
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
+    /** Set explicitly by the service layer from {@code TenantContext} on
+     * creation; every read is scoped by it via tenant-aware repository
+     * methods (see {@code PatientRepository}/{@code PatientServiceImpl}). */
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
     @Column(name = "first_name", nullable = false)
     private String firstName;
 
@@ -50,7 +56,9 @@ public class Patient {
     @Column
     private String email;
 
-    @Column(name = "phone_number", nullable = false, unique = true)
+    /** Unique per tenant (see {@code uq_patients_tenant_phone}), not globally:
+     * the same person may be a patient at more than one clinic. */
+    @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
     @Column(name = "date_of_birth")

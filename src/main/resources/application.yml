@@ -84,9 +84,31 @@ app:
     appointment-count: ${SEED_APPOINTMENT_COUNT:500}
     knowledge-base-article-count: ${SEED_KB_ARTICLE_COUNT:100}
     faq-count: ${SEED_FAQ_COUNT:50}
+    default-tenant-name: ${SEED_TENANT_NAME:Demo Clinic}
+    default-tenant-slug: ${SEED_TENANT_SLUG:demo-clinic}
+    # If either is left unset, a random password is generated and logged
+    # once at startup instead (see DemoDataSeeder) - never hardcode a real
+    # password here.
+    default-admin-email: ${SEED_ADMIN_EMAIL:}
+    default-admin-password: ${SEED_ADMIN_PASSWORD:}
+    default-admin-full-name: ${SEED_ADMIN_FULL_NAME:Demo Admin}
+
+  # The very first platform super admin (able to onboard tenants via
+  # POST /api/super-admin/tenants) is bootstrapped from these on startup,
+  # only if no super admin exists yet and both are set - see
+  # com.healthcareai.seed.SuperAdminBootstrap. No hardcoded default.
+  super-admin:
+    email: ${SUPER_ADMIN_EMAIL:}
+    password: ${SUPER_ADMIN_PASSWORD:}
+    full-name: ${SUPER_ADMIN_FULL_NAME:Platform Super Admin}
 
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+
+  # Base URL of the staff web app, used to build the password reset link
+  # sent by POST /api/auth/forgot-password.
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
 
   jwt:
     secret: ${JWT_SECRET:change-me-in-production-to-a-long-random-secret-value}

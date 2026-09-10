@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.healthcareai.entity.AuditLog;
 import com.healthcareai.repository.AuditLogRepository;
+import com.healthcareai.tenant.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,6 +23,7 @@ public class AuditLogServiceImpl implements AuditLogService {
     public AuditLog record(String actor, String action, String entityType, String entityId,
                             Map<String, Object> details, String ipAddress) {
         AuditLog auditLog = AuditLog.builder()
+                .tenantId(TenantContext.getCurrentTenantId())
                 .actor(actor)
                 .action(action)
                 .entityType(entityType)

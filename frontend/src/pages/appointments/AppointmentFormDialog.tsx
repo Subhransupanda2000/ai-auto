@@ -9,6 +9,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  InputAdornment,
   TextField,
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
@@ -24,6 +25,7 @@ const appointmentSchema = z.object({
   startTime: z.string().min(1, 'Select a start time'),
   durationMinutes: z.coerce.number().min(15).max(240),
   reason: z.string().optional(),
+  consultationFee: z.string().optional(),
 });
 
 type AppointmentFormValues = z.infer<typeof appointmentSchema>;
@@ -68,6 +70,7 @@ export function AppointmentFormDialog({
       startTime: '09:00',
       durationMinutes: 30,
       reason: '',
+      consultationFee: '',
     },
   });
 
@@ -83,6 +86,7 @@ export function AppointmentFormDialog({
         startTime: toTimeInput(appointment?.scheduledStart),
         durationMinutes,
         reason: appointment?.reason ?? '',
+        consultationFee: appointment?.consultationFee != null ? String(appointment.consultationFee) : '',
       });
     }
   }, [open, appointment, reset]);
@@ -99,12 +103,14 @@ export function AppointmentFormDialog({
   const submit = handleSubmit((values) => {
     const start = new Date(`${values.date}T${values.startTime}:00`);
     const end = addMinutes(start, values.durationMinutes);
+    const trimmedFee = values.consultationFee?.trim();
     onSubmit({
       patientId: values.patientId,
       doctorId: values.doctorId,
       start: start.toISOString(),
       end: end.toISOString(),
       reason: values.reason,
+      consultationFee: trimmedFee ? Number(trimmedFee) : null,
     });
   });
 
@@ -183,11 +189,32 @@ export function AppointmentFormDialog({
               )}
             />
           </Grid>
-          <Grid size={12}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="reason"
               control={control}
               render={({ field }) => <TextField {...field} label="Reason" fullWidth multiline minRows={2} />}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="consultationFee"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  type="number"
+                  label="Consultation fee"
+                  fullWidth
+                  placeholder="0.00"
+                  helperText="Optional - leave blank if not charged yet"
+                  slotProps={{
+                    input: {
+                      startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                    },
+                  }}
+                />
+              )}
             />
           </Grid>
         </Grid>
