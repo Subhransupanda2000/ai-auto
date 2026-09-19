@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   Chip,
+  Divider,
   IconButton,
   InputAdornment,
   Menu,
@@ -22,13 +23,33 @@ import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded';
-import { PageHeader } from '../../components/common/PageHeader';
+import MedicalServicesRoundedIcon from '@mui/icons-material/MedicalServicesRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded';
+import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
+import CallRoundedIcon from '@mui/icons-material/CallRounded';
+import { PageHero } from '../../components/common/PageHero';
+import { StatCard } from '../../components/common/StatCard';
 import { EmptyState } from '../../components/common/EmptyState';
 import { LoadingState } from '../../components/common/LoadingState';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { DoctorFormDialog } from './DoctorFormDialog';
 import { useCreateDoctor, useDeleteDoctor, useDoctors, useUpdateDoctor } from '../../hooks/useDoctors';
 import type { DoctorRequest, DoctorWithSchedule } from '../../types/doctor';
+
+const AVATAR_GRADIENTS = [
+  'linear-gradient(135deg, #3B6FE0, #6C93EA)',
+  'linear-gradient(135deg, #0FB5A7, #4CCBC0)',
+  'linear-gradient(135deg, #E6A23C, #F0C778)',
+  'linear-gradient(135deg, #8E6FE0, #B79CF0)',
+  'linear-gradient(135deg, #E4574C, #F0938A)',
+];
+
+function gradientFor(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+}
 
 export function DoctorsPage() {
   const { enqueueSnackbar } = useSnackbar();
@@ -51,6 +72,12 @@ export function DoctorsPage() {
       `${d.firstName} ${d.lastName} ${d.specialty}`.toLowerCase().includes(q),
     );
   }, [doctors, search]);
+
+  const stats = useMemo(() => {
+    const active = doctors.filter((d) => d.active).length;
+    const specialties = new Set(doctors.map((d) => d.specialty)).size;
+    return { total: doctors.length, active, specialties };
+  }, [doctors]);
 
   const handleCreate = (values: DoctorRequest) => {
     createDoctor.mutate(values, {
@@ -87,9 +114,11 @@ export function DoctorsPage() {
 
   return (
     <Box>
-      <PageHeader
+      <PageHero
         title="Doctors"
         subtitle="Manage clinicians, specialties, and availability."
+        icon={<MedicalServicesRoundedIcon />}
+        gradient="linear-gradient(135deg, #0FB5A7 0%, #3B6FE0 65%, #2A50A8 130%)"
         actions={
           <Button
             variant="contained"
@@ -98,11 +127,34 @@ export function DoctorsPage() {
               setEditingDoctor(null);
               setFormOpen(true);
             }}
+            sx={{
+              bgcolor: '#FFFFFF',
+              color: 'primary.dark',
+              fontWeight: 700,
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
+            }}
           >
             Add Doctor
           </Button>
         }
       />
+
+      <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard label="Total Doctors" value={stats.total} icon={<MedicalServicesRoundedIcon />} color="primary" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard
+            label="Active"
+            value={`${stats.active}/${stats.total}`}
+            icon={<CheckCircleRoundedIcon />}
+            color="success"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard label="Specialties Covered" value={stats.specialties} icon={<CategoryRoundedIcon />} color="secondary" />
+        </Grid>
+      </Grid>
 
       <TextField
         placeholder="Search by name or specialty..."
@@ -130,11 +182,28 @@ export function DoctorsPage() {
         <Grid container spacing={2.5}>
           {filteredDoctors.map((doctor) => (
             <Grid key={doctor.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-              <Card sx={{ height: '100%' }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+                  '&:hover': {
+                    transform: 'translateY(-3px)',
+                    boxShadow: '0 12px 28px rgba(15, 23, 42, 0.12)',
+                  },
+                }}
+              >
+                <Box sx={{ height: 6, background: gradientFor(doctor.id) }} />
                 <CardContent>
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                      <Avatar sx={{ width: 48, height: 48, bgcolor: 'primary.main' }}>
+                      <Avatar
+                        sx={{
+                          width: 52,
+                          height: 52,
+                          fontWeight: 700,
+                          background: gradientFor(doctor.id),
+                        }}
+                      >
                         {doctor.firstName.charAt(0)}
                         {doctor.lastName.charAt(0)}
                       </Avatar>
@@ -179,13 +248,21 @@ export function DoctorsPage() {
                     </Typography>
                   )}
 
-                  <Stack spacing={0.5} sx={{ mt: 2 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {doctor.email}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {doctor.phoneNumber}
-                    </Typography>
+                  <Divider sx={{ my: 2 }} />
+
+                  <Stack spacing={1}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <EmailRoundedIcon sx={{ fontSize: 16 }} color="disabled" />
+                      <Typography variant="caption" color="text.secondary">
+                        {doctor.email}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <CallRoundedIcon sx={{ fontSize: 16 }} color="disabled" />
+                      <Typography variant="caption" color="text.secondary">
+                        {doctor.phoneNumber}
+                      </Typography>
+                    </Stack>
                   </Stack>
                 </CardContent>
               </Card>

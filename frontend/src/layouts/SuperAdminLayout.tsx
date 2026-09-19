@@ -1,8 +1,17 @@
 import { AppBar, Avatar, Box, Button, Stack, Toolbar, Typography } from '@mui/material';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import { Outlet } from 'react-router-dom';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import PaidRoundedIcon from '@mui/icons-material/PaidRounded';
+import ContactMailRoundedIcon from '@mui/icons-material/ContactMailRounded';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useSuperAdminAuth } from '../hooks/useSuperAdminAuth';
+
+const NAV_LINKS = [
+  { label: 'Tenants', path: '/super-admin/tenants', icon: GroupsRoundedIcon },
+  { label: 'Payments', path: '/super-admin/payments', icon: PaidRoundedIcon },
+  { label: 'Enquiries', path: '/super-admin/enquiries', icon: ContactMailRoundedIcon },
+];
 
 /**
  * Minimal shell for the platform super-admin surface - deliberately
@@ -22,6 +31,23 @@ export function SuperAdminLayout() {
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
             Platform Admin
           </Typography>
+          <Stack direction="row" spacing={0.5} sx={{ ml: 3 }}>
+            {NAV_LINKS.map(({ label, path, icon: Icon }) => (
+              <Button
+                key={path}
+                component={NavLink}
+                to={path}
+                size="small"
+                startIcon={<Icon fontSize="small" />}
+                sx={{
+                  color: 'text.secondary',
+                  '&.active': { color: 'primary.main', bgcolor: (theme) => `${theme.palette.primary.main}14` },
+                }}
+              >
+                {label}
+              </Button>
+            ))}
+          </Stack>
           <Box sx={{ flexGrow: 1 }} />
           <Stack direction="row" spacing={2} alignItems="center">
             <Typography variant="body2" color="text.secondary">

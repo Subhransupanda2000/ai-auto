@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSnackbar } from 'notistack';
 import {
+  Avatar,
   Box,
   Button,
   Card,
@@ -8,8 +9,10 @@ import {
   InputAdornment,
   Menu,
   MenuItem,
-  Tab,
-  Tabs,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
   TextField,
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
@@ -19,8 +22,15 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import EditCalendarRoundedIcon from '@mui/icons-material/EditCalendarRounded';
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
+import EventAvailableRoundedIcon from '@mui/icons-material/EventAvailableRounded';
+import TodayRoundedIcon from '@mui/icons-material/TodayRounded';
+import TaskAltRoundedIcon from '@mui/icons-material/TaskAltRounded';
+import PaidRoundedIcon from '@mui/icons-material/PaidRounded';
+import TableRowsRoundedIcon from '@mui/icons-material/TableRowsRounded';
+import CalendarViewMonthRoundedIcon from '@mui/icons-material/CalendarViewMonthRounded';
 import { format } from 'date-fns';
-import { PageHeader } from '../../components/common/PageHeader';
+import { PageHero } from '../../components/common/PageHero';
+import { StatCard } from '../../components/common/StatCard';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { StatusChip } from '../../components/common/StatusChip';
 import { AppointmentFormDialog } from './AppointmentFormDialog';
@@ -32,6 +42,7 @@ import {
   useUpdateAppointment,
 } from '../../hooks/useAppointments';
 import { useDoctors } from '../../hooks/useDoctors';
+import { formatRupees } from '../../utils/currency';
 import type { Appointment, AppointmentRequest } from '../../types/appointment';
 
 export function AppointmentsPage() {
@@ -61,6 +72,15 @@ export function AppointmentsPage() {
       return matchesSearch && matchesDoctor && matchesDate;
     });
   }, [appointments, search, doctorFilter, dateFilter]);
+
+  const stats = useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const today = appointments.filter((a) => format(new Date(a.scheduledStart), 'yyyy-MM-dd') === todayStr).length;
+    const completed = appointments.filter((a) => a.status === 'COMPLETED');
+    const upcoming = appointments.filter((a) => ['SCHEDULED', 'CONFIRMED', 'RESCHEDULED'].includes(a.status)).length;
+    const revenue = completed.reduce((sum, a) => sum + (a.consultationFee ?? 0), 0);
+    return { today, upcoming, completed: completed.length, revenue };
+  }, [appointments]);
 
   const handleCreate = (values: AppointmentRequest) => {
     createAppointment.mutate(values, {
@@ -123,7 +143,22 @@ export function AppointmentsPage() {
   };
 
   const columns: GridColDef<Appointment>[] = [
-    { field: 'patientName', headerName: 'Patient', flex: 1, minWidth: 160 },
+    {
+      field: 'patientName',
+      headerName: 'Patient',
+      flex: 1.2,
+      minWidth: 180,
+      renderCell: (params) => (
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ height: '100%' }}>
+          <Avatar sx={{ width: 32, height: 32, fontSize: 13, bgcolor: 'primary.light' }}>
+            {params.value?.charAt(0) ?? '?'}
+          </Avatar>
+          <Typography variant="body2" fontWeight={600}>
+            {params.value}
+          </Typography>
+        </Stack>
+      ),
+    },
     { field: 'doctorName', headerName: 'Doctor', flex: 1, minWidth: 160 },
     {
       field: 'scheduledStart',
@@ -169,9 +204,11 @@ export function AppointmentsPage() {
 
   return (
     <Box>
-      <PageHeader
+      <PageHero
         title="Appointments"
         subtitle="Book, reschedule, and manage patient appointments."
+        icon={<EventAvailableRoundedIcon />}
+        gradient="linear-gradient(135deg, #2A50A8 0%, #3B6FE0 55%, #0FB5A7 130%)"
         actions={
           <Button
             variant="contained"
@@ -180,59 +217,103 @@ export function AppointmentsPage() {
               setEditingAppointment(null);
               setFormOpen(true);
             }}
+            sx={{
+              bgcolor: '#FFFFFF',
+              color: 'primary.dark',
+              fontWeight: 700,
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
+            }}
           >
             Book Appointment
           </Button>
         }
       />
 
-      <Grid container spacing={2} sx={{ mb: 2.5 }} alignItems="center">
-        <Grid size={{ xs: 12, md: 4 }}>
-          <TextField
-            placeholder="Search by patient or doctor..."
-            size="small"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            fullWidth
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRoundedIcon fontSize="small" color="action" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
+      <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label="Today's Appointments" value={stats.today} icon={<TodayRoundedIcon />} color="primary" />
         </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <TextField select size="small" label="Doctor" value={doctorFilter} onChange={(e) => setDoctorFilter(e.target.value)} fullWidth>
-            <MenuItem value="all">All doctors</MenuItem>
-            {doctors.map((d) => (
-              <MenuItem key={d.id} value={d.id}>
-                Dr. {d.firstName} {d.lastName}
-              </MenuItem>
-            ))}
-          </TextField>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label="Upcoming" value={stats.upcoming} icon={<EventAvailableRoundedIcon />} color="info" />
         </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <TextField
-            type="date"
-            size="small"
-            label="Date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label="Completed" value={stats.completed} icon={<TaskAltRoundedIcon />} color="success" />
         </Grid>
-        <Grid size={{ xs: 12, md: 2 }}>
-          <Tabs value={view} onChange={(_e, v) => setView(v)} sx={{ minHeight: 0 }}>
-            <Tab value="table" label="Table" sx={{ minHeight: 0, py: 1 }} />
-            <Tab value="calendar" label="Calendar" sx={{ minHeight: 0, py: 1 }} />
-          </Tabs>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard label="Revenue Collected" value={formatRupees(stats.revenue)} icon={<PaidRoundedIcon />} color="secondary" />
         </Grid>
       </Grid>
+
+      <Card sx={{ p: 2, mb: 2.5 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              placeholder="Search by patient or doctor..."
+              size="small"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              fullWidth
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchRoundedIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <TextField select size="small" label="Doctor" value={doctorFilter} onChange={(e) => setDoctorFilter(e.target.value)} fullWidth>
+              <MenuItem value="all">All doctors</MenuItem>
+              {doctors.map((d) => (
+                <MenuItem key={d.id} value={d.id}>
+                  Dr. {d.firstName} {d.lastName}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <TextField
+              type="date"
+              size="small"
+              label="Date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              fullWidth
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 2 }}>
+            <ToggleButtonGroup
+              value={view}
+              exclusive
+              size="small"
+              onChange={(_e, v) => v && setView(v)}
+              fullWidth
+              sx={{
+                bgcolor: 'action.hover',
+                borderRadius: 2,
+                p: 0.5,
+                '& .MuiToggleButton-root': {
+                  border: 'none',
+                  borderRadius: 1.5,
+                  fontWeight: 600,
+                  '&.Mui-selected': { bgcolor: 'background.paper', boxShadow: '0 1px 3px rgba(15,23,42,0.12)' },
+                },
+              }}
+            >
+              <ToggleButton value="table">
+                <TableRowsRoundedIcon fontSize="small" sx={{ mr: 0.75 }} /> Table
+              </ToggleButton>
+              <ToggleButton value="calendar">
+                <CalendarViewMonthRoundedIcon fontSize="small" sx={{ mr: 0.75 }} /> Calendar
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Grid>
+        </Grid>
+      </Card>
 
       {view === 'table' ? (
         <Card>
@@ -244,7 +325,13 @@ export function AppointmentsPage() {
               disableRowSelectionOnClick
               pageSizeOptions={[10, 25, 50]}
               initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-              sx={{ border: 'none' }}
+              rowHeight={64}
+              sx={{
+                border: 'none',
+                '& .MuiDataGrid-columnHeaders': { bgcolor: 'action.hover' },
+                '& .MuiDataGrid-cell': { display: 'flex', alignItems: 'center' },
+                '& .MuiDataGrid-row:hover': { bgcolor: 'action.hover' },
+              }}
             />
           </Box>
         </Card>

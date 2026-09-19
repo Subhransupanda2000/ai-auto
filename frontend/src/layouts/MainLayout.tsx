@@ -3,11 +3,14 @@ import { Box, Toolbar } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import { Sidebar, SIDEBAR_RAIL_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
 import { TopBar } from './TopBar';
+import { DemoModeBanner } from '../components/common/DemoModeBanner';
 import { useSidebarStore } from '../store/sidebarStore';
+import { useAuth } from '../hooks/useAuth';
 
 export function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { collapsed } = useSidebarStore();
+  const { user } = useAuth();
   const sidebarWidth = collapsed ? SIDEBAR_RAIL_WIDTH : SIDEBAR_WIDTH;
 
   return (
@@ -30,6 +33,7 @@ export function MainLayout() {
       >
         <TopBar onMenuClick={() => setMobileOpen(true)} />
         <Toolbar />
+        {user?.role === 'DEMO' && <DemoModeBanner />}
         <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1600, mx: 'auto' }}>
           <Outlet />
         </Box>

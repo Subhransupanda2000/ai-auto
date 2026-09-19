@@ -18,4 +18,13 @@ public interface TenantService {
     Optional<Tenant> findById(UUID tenantId);
 
     Tenant setActive(UUID tenantId, boolean active);
+
+    /** Super-admin-only toggle for whether {@code AppointmentServiceImpl}
+     * sends appointment-lifecycle WhatsApp messages (scheduled/rescheduled/
+     * cancelled/completed) to this tenant's patients. */
+    Tenant setWhatsappNotificationsEnabled(UUID tenantId, boolean enabled);
+
+    /** Super-admin-only toggle for whether {@code ChatController} accepts
+     * new messages to the AI receptionist for this tenant. */
+    Tenant setAiChatEnabled(UUID tenantId, boolean enabled);
 }

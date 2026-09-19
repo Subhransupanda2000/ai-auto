@@ -9,6 +9,10 @@ public record TenantResponse(
         String slug,
         boolean active,
         long userCount,
-        Instant createdAt
+        Instant createdAt,
+        boolean whatsappNotificationsEnabled,
+        long whatsappMessageCount,
+        boolean aiChatEnabled,
+        long aiChatMessageCount
 ) {
 }

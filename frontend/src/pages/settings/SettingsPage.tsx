@@ -9,6 +9,7 @@ import {
   Card,
   CardContent,
   CardHeader,
+  Chip,
   Divider,
   FormControlLabel,
   MenuItem,
@@ -23,13 +24,24 @@ import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
 import LockResetRoundedIcon from '@mui/icons-material/LockResetRounded';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import SmartToyRoundedIcon from '@mui/icons-material/SmartToyRounded';
 import { PageHeader } from '../../components/common/PageHeader';
 import { LoadingState } from '../../components/common/LoadingState';
 import { useSaveSettings, useSettings } from '../../hooks/useSettings';
 import { useChangePassword } from '../../hooks/usePasswordReset';
+import { useTenantSelf, useTenantSelfMessageStats } from '../../hooks/useTenantSelf';
+import { useAuth } from '../../hooks/useAuth';
 import { useThemeStore } from '../../store/themeStore';
 import type { AppSettings } from '../../types/settings';
 import type { ApiError } from '../../types/common';
+import type { MessageStatsRange } from '../../types/tenant';
+
+const MESSAGE_STATS_RANGE_OPTIONS: { value: MessageStatsRange; label: string }[] = [
+  { value: 'ALL_TIME', label: 'All time' },
+  { value: 'THIS_MONTH', label: 'This month' },
+  { value: 'LAST_MONTH', label: 'Last month' },
+];
 
 const changePasswordSchema = z
   .object({
@@ -46,7 +58,11 @@ type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
 export function SettingsPage() {
   const { enqueueSnackbar } = useSnackbar();
+  const { user } = useAuth();
   const { data: settings, isLoading } = useSettings();
+  const { data: tenantSelf } = useTenantSelf();
+  const [messageRange, setMessageRange] = useState<MessageStatsRange>('ALL_TIME');
+  const { data: messageStats } = useTenantSelfMessageStats(messageRange);
   const saveSettings = useSaveSettings();
   const changePassword = useChangePassword();
   const { mode, setMode } = useThemeStore();
@@ -154,6 +170,88 @@ export function SettingsPage() {
             </Grid>
           </CardContent>
         </Card>
+
+        {user?.role === 'ADMIN' && tenantSelf && (
+          <Card>
+            <CardHeader
+              title="Clinic Feature Status"
+              subheader="Set by your platform provider. Contact them to change a toggle."
+              titleTypographyProps={{ variant: 'subtitle1' }}
+              action={
+                <TextField
+                  select
+                  size="small"
+                  label="Message counts for"
+                  value={messageRange}
+                  onChange={(e) => setMessageRange(e.target.value as MessageStatsRange)}
+                  sx={{ minWidth: 160 }}
+                >
+                  {MESSAGE_STATS_RANGE_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              }
+            />
+            <CardContent sx={{ pt: 0 }}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{ p: 2, borderRadius: 2, bgcolor: 'action.hover' }}
+                  >
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <WhatsAppIcon sx={{ color: '#25D366' }} />
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          WhatsApp appointment messages
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {messageStats?.whatsappMessageCount ?? tenantSelf.whatsappMessageCount} sent to patients
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Chip
+                      size="small"
+                      label={tenantSelf.whatsappNotificationsEnabled ? 'Enabled' : 'Disabled'}
+                      color={tenantSelf.whatsappNotificationsEnabled ? 'success' : 'default'}
+                    />
+                  </Stack>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{ p: 2, borderRadius: 2, bgcolor: 'action.hover' }}
+                  >
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <SmartToyRoundedIcon color="secondary" />
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          AI receptionist chat
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {messageStats?.aiChatMessageCount ?? tenantSelf.aiChatMessageCount} messages handled
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Chip
+                      size="small"
+                      label={tenantSelf.aiChatEnabled ? 'Enabled' : 'Disabled'}
+                      color={tenantSelf.aiChatEnabled ? 'success' : 'default'}
+                    />
+                  </Stack>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader title="Business Hours" titleTypographyProps={{ variant: 'subtitle1' }} />

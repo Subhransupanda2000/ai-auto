@@ -9,4 +9,7 @@ export const queryKeys = {
   knowledgeBase: ['knowledge-base'] as const,
   settings: ['settings'] as const,
   chatConversations: ['chat', 'conversations'] as const,
+  tenantSelf: ['tenant', 'me'] as const,
+  tenantSelfMessageStats: (range: string) => ['tenant', 'me', 'message-stats', range] as const,
+  staff: ['staff'] as const,
 };

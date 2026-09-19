@@ -7,12 +7,18 @@ import ChatRoundedIcon from '@mui/icons-material/ChatRounded';
 import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
 import PaidRoundedIcon from '@mui/icons-material/PaidRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
+import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
+import type { Role } from '../types/auth';
 
 export interface NavItem {
   label: string;
   path: string;
   icon: SvgIconComponent;
+  /** Restricts this item to the given roles; omit to show it to everyone
+   * signed in. */
+  roles?: Role[];
 }
 
 export interface NavSection {
@@ -43,11 +49,30 @@ export const navSections: NavSection[] = [
   },
   {
     label: 'Insights',
+    items: [{ label: 'Analytics', path: '/analytics', icon: InsightsRoundedIcon }],
+  },
+  {
+    label: 'Administration',
     items: [
-      { label: 'Analytics', path: '/analytics', icon: InsightsRoundedIcon },
-      { label: 'Settings', path: '/settings', icon: SettingsRoundedIcon },
+      { label: 'Staff', path: '/staff', icon: BadgeRoundedIcon, roles: ['ADMIN'] },
+      { label: 'Billing', path: '/billing', icon: ReceiptLongRoundedIcon, roles: ['ADMIN'] },
+      // Backs onto GET /api/tenant/me, which is ADMIN-only - hidden for the
+      // read-only demo role (see RequestDemoPage) so it doesn't 403.
+      { label: 'Settings', path: '/settings', icon: SettingsRoundedIcon, roles: ['ADMIN', 'DOCTOR', 'RECEPTIONIST'] },
     ],
   },
 ];
+
+/** Nav sections filtered down to the items a given role may see, dropping
+ * any section left with no items. `role` may be undefined momentarily
+ * while auth state is still hydrating. */
+export function getNavSectionsForRole(role: Role | undefined): NavSection[] {
+  return navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.roles || (role && item.roles.includes(role))),
+    }))
+    .filter((section) => section.items.length > 0);
+}
 
 export const navItems: NavItem[] = navSections.flatMap((section) => section.items);

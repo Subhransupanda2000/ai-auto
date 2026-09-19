@@ -52,6 +52,15 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.SERVICE_UNAVAILABLE, debugMessage, request);
     }
 
+    @ExceptionHandler(PaymentGatewayException.class)
+    public ResponseEntity<ErrorResponse> handlePaymentGatewayFailure(PaymentGatewayException e, WebRequest request) {
+        log.error("Razorpay payment gateway failure", e);
+        return build(HttpStatus.SERVICE_UNAVAILABLE,
+                "The payment gateway is temporarily unavailable. Please try again shortly, or contact support "
+                        + "if this persists.",
+                request);
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException e, WebRequest request) {
         return build(HttpStatus.UNAUTHORIZED, e.getMessage(), request);

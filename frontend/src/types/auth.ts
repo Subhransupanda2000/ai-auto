@@ -1,4 +1,6 @@
-export type Role = 'ADMIN' | 'DOCTOR' | 'RECEPTIONIST';
+/** 'DEMO' is a short-lived, read-only preview session (see
+ * RequestDemoPage/DemoAuthenticationFilter) - never a real staff account. */
+export type Role = 'ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'DEMO';
 
 export interface LoginRequest {
   email: string;
@@ -7,8 +9,15 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   accessToken: string;
+  /** Null for the super-admin login surface, which has no refresh-token
+   * flow (see SuperAdminAuthController). */
+  refreshToken: string | null;
   tokenType: string;
   expiresInSeconds: number;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
 }
 
 export interface RegisterRequest {
@@ -23,6 +32,8 @@ export interface UserResponse {
   email: string;
   fullName: string;
   role: string;
+  enabled: boolean;
+  createdAt: string;
 }
 
 export interface AuthUser {

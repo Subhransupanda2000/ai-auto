@@ -52,6 +52,39 @@ public class Tenant {
     @Builder.Default
     private boolean active = true;
 
+    /** Per-clinic feature toggle controlled by a super admin: when {@code
+     * false}, {@code AppointmentServiceImpl} skips sending any WhatsApp
+     * message (scheduled/rescheduled/cancelled/completed) for this tenant's
+     * appointments. Defaults to on for newly onboarded clinics. */
+    @Column(name = "whatsapp_notifications_enabled", nullable = false)
+    @Builder.Default
+    private boolean whatsappNotificationsEnabled = true;
+
+    /** Running count of appointment-lifecycle WhatsApp messages actually
+     * sent for this tenant, surfaced to super admins on the Tenants page.
+     * Incremented via {@code TenantRepository.incrementWhatsappMessageCount}
+     * whenever {@code AppointmentServiceImpl} sends one. */
+    @Column(name = "whatsapp_message_count", nullable = false)
+    @Builder.Default
+    private long whatsappMessageCount = 0;
+
+    /** Per-clinic feature toggle controlled by a super admin: when {@code
+     * false}, {@code ChatController} rejects new messages to the AI
+     * receptionist (POST /api/chat) for this tenant. Defaults to on for
+     * newly onboarded clinics. */
+    @Column(name = "ai_chat_enabled", nullable = false)
+    @Builder.Default
+    private boolean aiChatEnabled = true;
+
+    /** Running count of user messages successfully handled by the AI
+     * receptionist for this tenant, surfaced to super admins (and the
+     * clinic's own admin) alongside {@code whatsappMessageCount}.
+     * Incremented via {@code TenantRepository.incrementAiChatMessageCount}
+     * in {@code ChatController}. */
+    @Column(name = "ai_chat_message_count", nullable = false)
+    @Builder.Default
+    private long aiChatMessageCount = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

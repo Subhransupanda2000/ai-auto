@@ -16,6 +16,7 @@ import com.healthcareai.dto.ForgotPasswordRequest;
 import com.healthcareai.dto.LoginRequest;
 import com.healthcareai.dto.LoginResponse;
 import com.healthcareai.dto.MessageResponse;
+import com.healthcareai.dto.RefreshTokenRequest;
 import com.healthcareai.dto.RegisterRequest;
 import com.healthcareai.dto.ResetPasswordRequest;
 import com.healthcareai.dto.UserResponse;
@@ -23,6 +24,7 @@ import com.healthcareai.entity.Tenant;
 import com.healthcareai.entity.User;
 import com.healthcareai.security.JwtService;
 import com.healthcareai.service.PasswordResetService;
+import com.healthcareai.service.RefreshTokenService;
 import com.healthcareai.service.TenantService;
 import com.healthcareai.service.UserService;
 
@@ -48,10 +50,12 @@ public class AuthController {
     private final UserService userService;
     private final TenantService tenantService;
     private final PasswordResetService passwordResetService;
+    private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
 
     @PostMapping("/login")
-    @Operation(summary = "Authenticate with email/password and receive a JWT access token.")
+    @Operation(summary = "Authenticate with email/password and receive a JWT access token plus a "
+            + "long-lived refresh token.")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         try {
             authenticationManager.authenticate(
@@ -68,8 +72,45 @@ public class AuthController {
             throw new BadCredentialsException("This clinic's account has been deactivated. Contact support.");
         }
 
-        String token = jwtService.generateAccessToken(user, tenant);
-        return ResponseEntity.ok(LoginResponse.bearer(token, jwtService.getAccessTokenTtlSeconds()));
+        String accessToken = jwtService.generateAccessToken(user, tenant);
+        RefreshTokenService.IssuedToken refreshToken = refreshTokenService.issue(user.getId());
+        return ResponseEntity.ok(LoginResponse.bearer(accessToken, refreshToken.rawToken(), jwtService.getAccessTokenTtlSeconds()));
+    }
+
+    /**
+     * Exchanges a still-valid refresh token for a new access token (and, since
+     * refresh tokens are single-use/rotated, a new refresh token too) without
+     * requiring the user's password again. This is what lets a staff session
+     * stay signed in across the access token's short TTL without a full
+     * re-login every {@code app.jwt.access-token-ttl-minutes}.
+     */
+    @PostMapping("/refresh")
+    @Operation(summary = "Exchange a refresh token for a new access token (and a new refresh token).")
+    public ResponseEntity<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        RefreshTokenService.RotationResult rotation = refreshTokenService.rotate(request.refreshToken());
+
+        User user = userService.findById(rotation.userId())
+                .orElseThrow(() -> new BadCredentialsException("Invalid or expired session."));
+        Tenant tenant = tenantService.findById(user.getTenantId())
+                .orElseThrow(() -> new BadCredentialsException("Invalid or expired session."));
+        if (!tenant.isActive() || !user.isEnabled()) {
+            throw new BadCredentialsException("This account no longer has access. Contact your administrator.");
+        }
+
+        String accessToken = jwtService.generateAccessToken(user, tenant);
+        return ResponseEntity.ok(LoginResponse.bearer(
+                accessToken, rotation.newToken().rawToken(), jwtService.getAccessTokenTtlSeconds()));
+    }
+
+    /** Revokes a refresh token so it can no longer be used to silently renew
+     * the session - called when the user explicitly signs out. Always
+     * succeeds (even for an already-invalid token) since the end state
+     * ("this token doesn't work") is the same either way. */
+    @PostMapping("/logout")
+    @Operation(summary = "Revoke a refresh token (sign out of this session).")
+    public ResponseEntity<MessageResponse> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        refreshTokenService.revoke(request.refreshToken());
+        return ResponseEntity.ok(new MessageResponse("Signed out."));
     }
 
     /**
@@ -91,7 +132,12 @@ public class AuthController {
         User caller = userService.findByEmail(authentication.getName())
                 .orElseThrow(() -> new BadCredentialsException("Invalid or expired session."));
         User user = userService.createUser(request.email(), request.password(), request.fullName(), request.role(), caller.getTenantId());
-        return ResponseEntity.ok(new UserResponse(user.getId(), user.getEmail(), user.getFullName(), user.getRole().name()));
+        return ResponseEntity.ok(toResponse(user));
+    }
+
+    private UserResponse toResponse(User user) {
+        return new UserResponse(user.getId(), user.getEmail(), user.getFullName(), user.getRole().name(),
+                user.isEnabled(), user.getCreatedAt());
     }
 
     /**

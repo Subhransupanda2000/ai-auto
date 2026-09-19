@@ -1,9 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, TextField, Typography } from '@mui/material';
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  IconButton,
+  InputAdornment,
+  TextField,
+  Typography,
+} from '@mui/material';
 import Grid from '@mui/material/Grid2';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import type { CreateTenantRequest } from '../../types/tenant';
 
 const slugPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -37,6 +50,7 @@ interface CreateTenantDialogProps {
 }
 
 export function CreateTenantDialog({ open, loading, onClose, onSubmit }: CreateTenantDialogProps) {
+  const [showPassword, setShowPassword] = useState(false);
   const {
     control,
     handleSubmit,
@@ -52,6 +66,7 @@ export function CreateTenantDialog({ open, loading, onClose, onSubmit }: CreateT
   useEffect(() => {
     if (open) {
       reset({ tenantName: '', slug: '', adminFullName: '', adminEmail: '', adminPassword: '' });
+      setShowPassword(false);
     }
   }, [open, reset]);
 
@@ -147,11 +162,31 @@ export function CreateTenantDialog({ open, loading, onClose, onSubmit }: CreateT
               render={({ field }) => (
                 <TextField
                   {...field}
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   label="Admin temporary password"
                   fullWidth
                   error={Boolean(errors.adminPassword)}
                   helperText={errors.adminPassword?.message ?? 'Share this with the clinic admin so they can sign in and change it.'}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            size="small"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            edge="end"
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          >
+                            {showPassword ? (
+                              <VisibilityOffRoundedIcon fontSize="small" />
+                            ) : (
+                              <VisibilityRoundedIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
                 />
               )}
             />

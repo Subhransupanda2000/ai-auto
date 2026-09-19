@@ -170,3 +170,23 @@ app:
     enabled: ${N8N_ENABLED:false}
     webhook-base-url: ${N8N_WEBHOOK_BASE_URL:}
     inbound-webhook-secret: ${N8N_INBOUND_WEBHOOK_SECRET:}
+
+  # Razorpay payments (com.healthcareai.integration.razorpay): super admins
+  # raise one-off invoices against a tenant, paid via Razorpay Checkout.
+  # key-id/key-secret come from the Razorpay Dashboard's API Keys screen
+  # (test or live mode); webhook-secret is set when configuring the
+  # webhook endpoint there. Get test-mode keys for free at
+  # https://dashboard.razorpay.com/app/keys - no real bank account/KYC is
+  # needed until you're ready to go live and collect real money.
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+
+  # Public "Request a Demo" read-only preview (com.healthcareai.security.demo):
+  # a lead who submits the form is handed a short-lived token scoped to
+  # this already-seeded tenant (see DemoDataSeeder / app.seed.default-tenant-slug),
+  # not a fresh/blank one - so they immediately see real-looking clinic data.
+  demo:
+    tenant-slug: ${DEMO_TENANT_SLUG:demo-clinic}
+    access-token-ttl-minutes: ${DEMO_ACCESS_TOKEN_TTL_MINUTES:60}

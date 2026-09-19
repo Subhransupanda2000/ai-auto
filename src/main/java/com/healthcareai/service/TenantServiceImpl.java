@@ -69,4 +69,28 @@ public class TenantServiceImpl implements TenantService {
         tenant.setActive(active);
         return tenantRepository.save(tenant);
     }
+
+    @Override
+    @Transactional
+    public Tenant setWhatsappNotificationsEnabled(UUID tenantId, boolean enabled) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Tenant", tenantId));
+        tenant.setWhatsappNotificationsEnabled(enabled);
+        Tenant saved = tenantRepository.save(tenant);
+        log.info("WhatsApp appointment notifications {} for tenant {} ({})",
+                enabled ? "enabled" : "disabled", saved.getId(), saved.getSlug());
+        return saved;
+    }
+
+    @Override
+    @Transactional
+    public Tenant setAiChatEnabled(UUID tenantId, boolean enabled) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Tenant", tenantId));
+        tenant.setAiChatEnabled(enabled);
+        Tenant saved = tenantRepository.save(tenant);
+        log.info("AI receptionist chat {} for tenant {} ({})",
+                enabled ? "enabled" : "disabled", saved.getId(), saved.getSlug());
+        return saved;
+    }
 }

@@ -5,6 +5,7 @@ import type {
   LoginRequest,
   LoginResponse,
   MessageResponse,
+  RefreshTokenRequest,
   RegisterRequest,
   ResetPasswordRequest,
   UserResponse,
@@ -13,6 +14,12 @@ import type {
 export const authApi = {
   login: (payload: LoginRequest) =>
     apiClient.post<LoginResponse>('/auth/login', payload).then((res) => res.data),
+
+  refresh: (payload: RefreshTokenRequest) =>
+    apiClient.post<LoginResponse>('/auth/refresh', payload).then((res) => res.data),
+
+  logout: (payload: RefreshTokenRequest) =>
+    apiClient.post<MessageResponse>('/auth/logout', payload).then((res) => res.data),
 
   register: (payload: RegisterRequest) =>
     apiClient.post<UserResponse>('/auth/register', payload).then((res) => res.data),

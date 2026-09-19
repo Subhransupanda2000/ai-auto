@@ -16,9 +16,14 @@ import { RevenuePage } from './pages/revenue/RevenuePage';
 import { KnowledgeBasePage } from './pages/knowledge-base/KnowledgeBasePage';
 import { ChatPage } from './pages/chat/ChatPage';
 import { AnalyticsPage } from './pages/dashboard/AnalyticsPage';
+import { StaffPage } from './pages/staff/StaffPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { SuperAdminLoginPage } from './pages/super-admin/SuperAdminLoginPage';
 import { TenantsPage } from './pages/super-admin/TenantsPage';
+import { PaymentsPage as SuperAdminPaymentsPage } from './pages/super-admin/PaymentsPage';
+import { EnquiriesPage } from './pages/super-admin/EnquiriesPage';
+import { BillingPage } from './pages/billing/BillingPage';
+import { RequestDemoPage } from './pages/demo/RequestDemoPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export function AppRoutes() {
@@ -27,6 +32,7 @@ export function AppRoutes() {
       <AuthWatcher />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/request-demo" element={<RequestDemoPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
@@ -45,6 +51,8 @@ export function AppRoutes() {
           <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/staff" element={<StaffPage />} />
+          <Route path="/billing" element={<BillingPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 
@@ -61,6 +69,8 @@ export function AppRoutes() {
         >
           <Route path="/super-admin" element={<Navigate to="/super-admin/tenants" replace />} />
           <Route path="/super-admin/tenants" element={<TenantsPage />} />
+          <Route path="/super-admin/payments" element={<SuperAdminPaymentsPage />} />
+          <Route path="/super-admin/enquiries" element={<EnquiriesPage />} />
         </Route>
 
         <Route path="/404" element={<NotFoundPage />} />

@@ -2,8 +2,14 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiError } from '../types/common';
 import { useAuthStore } from '../store/authStore';
 import { queryClient } from '../lib/queryClient';
+import { API_BASE_URL } from './env';
+import { refreshAccessToken } from './refreshAuth';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
+export { API_BASE_URL };
+
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _retriedAfterRefresh?: boolean;
+}
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -22,8 +28,22 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string; error?: string; details?: string[] }>) => {
-    if (error.response?.status === 401) {
+  async (error: AxiosError<{ message?: string; error?: string; details?: string[] }>) => {
+    const originalRequest = error.config as RetryableRequestConfig | undefined;
+    const isAuthEndpoint = originalRequest?.url?.includes('/auth/');
+
+    // A 401 on any other request usually just means the access token
+    // expired between AuthWatcher's proactive refresh checks - try once to
+    // silently renew it and replay the original request before giving up
+    // and signing the user out.
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retriedAfterRefresh && !isAuthEndpoint) {
+      originalRequest._retriedAfterRefresh = true;
+      const newAccessToken = await refreshAccessToken();
+      if (newAccessToken) {
+        originalRequest.headers.set('Authorization', `Bearer ${newAccessToken}`);
+        return apiClient(originalRequest);
+      }
+
       useAuthStore.getState().logout();
       // Prevents stale cross-session/cross-tenant data (patients, doctors,
       // appointments, ...) from lingering and being shown to whoever logs

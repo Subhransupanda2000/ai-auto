@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.healthcareai.entity.Role;
 import com.healthcareai.entity.User;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
@@ -20,4 +21,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByTenantId(UUID tenantId);
 
     long countByTenantId(UUID tenantId);
+
+    /** The clinic's original/primary admin account (earliest-created ADMIN
+     * for the tenant) - used by the super-admin "reset admin password"
+     * recovery flow (see UserServiceImpl.resetTenantAdminPassword), which
+     * doesn't depend on SMTP/email being configured at all. */
+    Optional<User> findFirstByTenantIdAndRoleOrderByCreatedAtAsc(UUID tenantId, Role role);
 }

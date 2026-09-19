@@ -19,7 +19,7 @@ import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import { useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { navSections } from './navConfig';
+import { getNavSectionsForRole } from './navConfig';
 import { useSidebarStore } from '../store/sidebarStore';
 import { useAuth } from '../hooks/useAuth';
 
@@ -39,6 +39,7 @@ export function Sidebar({ variant, open, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { collapsed, toggleCollapsed } = useSidebarStore();
+  const navSections = getNavSectionsForRole(user?.role);
 
   // The sidebar only collapses to a slim icon rail on desktop; the mobile
   // drawer always shows the full, labeled layout.

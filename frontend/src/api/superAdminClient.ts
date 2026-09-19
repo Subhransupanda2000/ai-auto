@@ -1,7 +1,7 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiError } from '../types/common';
 import { useSuperAdminAuthStore } from '../store/superAdminAuthStore';
-import { API_BASE_URL } from './client';
+import { API_BASE_URL } from './env';
 import { queryClient } from '../lib/queryClient';
 
 /**

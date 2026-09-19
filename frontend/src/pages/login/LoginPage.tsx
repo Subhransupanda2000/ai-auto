@@ -484,7 +484,16 @@ export function LoginPage() {
             Continue with Microsoft (coming soon)
           </Button>
 
-          <Stack alignItems="center" spacing={0.5} sx={{ mt: 4 }}>
+          <Stack alignItems="center" sx={{ mt: 2.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              New here?{' '}
+              <Link component={RouterLink} to="/request-demo" underline="hover">
+                Try a live demo
+              </Link>
+            </Typography>
+          </Stack>
+
+          <Stack alignItems="center" spacing={0.5} sx={{ mt: 3 }}>
             <Stack direction="row" spacing={0.5} alignItems="center">
               <ShieldRoundedIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
               <Typography variant="caption" color="text.disabled">

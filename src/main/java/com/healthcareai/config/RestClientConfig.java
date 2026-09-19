@@ -62,6 +62,20 @@ public class RestClientConfig {
                 .build();
     }
 
+    @Bean
+    public RestClient razorpayRestClient(RestClient.Builder builder, RazorpayProperties properties) {
+        // Razorpay's Orders API authenticates with HTTP Basic auth using the
+        // key id as username and key secret as password (see
+        // https://razorpay.com/docs/api/authentication/).
+        String credentials = properties.keyId() + ":" + properties.keySecret();
+        String basicAuth = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+        return builder
+                .baseUrl(properties.baseUrl())
+                .requestFactory(requestFactory(properties.timeoutSeconds()))
+                .defaultHeader("Authorization", "Basic " + basicAuth)
+                .build();
+    }
+
     private ClientHttpRequestFactory requestFactory(int timeoutSeconds) {
         ClientHttpRequestFactorySettings settings = ClientHttpRequestFactorySettings.DEFAULTS
                 .withConnectTimeout(Duration.ofSeconds(Math.min(timeoutSeconds, 10)))

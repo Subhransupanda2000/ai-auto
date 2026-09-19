@@ -6,7 +6,7 @@ import type { LoginRequest } from '../types/auth';
 import type { ApiError } from '../types/common';
 
 export function useAuth() {
-  const { user, isAuthenticated, setSession, logout } = useAuthStore();
+  const { user, isAuthenticated, refreshToken, setSession, logout } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -18,12 +18,20 @@ export function useAuth() {
       // doctors, and appointments can briefly (or not-so-briefly) show up
       // mixed in with this login's own data.
       queryClient.clear();
-      setSession(response.accessToken);
+      setSession(response.accessToken, response.refreshToken);
     },
     onSuccess: () => navigate('/', { replace: true }),
   });
 
   const signOut = () => {
+    // Best-effort: revoke the refresh token server-side too, so it can't
+    // be used to silently renew a session after the user explicitly signs
+    // out. Never blocks the local sign-out on this - an expired/missing
+    // token, or the request itself failing, still leaves the user logged
+    // out locally.
+    if (refreshToken) {
+      authApi.logout({ refreshToken }).catch(() => undefined);
+    }
     logout();
     queryClient.clear();
     navigate('/login', { replace: true });

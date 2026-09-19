@@ -47,6 +47,10 @@ public class SuperAdminAuthController {
         }
 
         String token = jwtService.generateAccessToken(superAdmin);
-        return ResponseEntity.ok(LoginResponse.bearer(token, jwtService.getAccessTokenTtlSeconds()));
+        // Super admins have no refresh-token flow (see class docs) - this
+        // surface is intentionally simpler and lower-traffic than staff
+        // login, so a hard re-login on token expiry is an acceptable
+        // trade-off. LoginResponse.refreshToken is simply null here.
+        return ResponseEntity.ok(LoginResponse.bearer(token, null, jwtService.getAccessTokenTtlSeconds()));
     }
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -7,6 +8,7 @@ import {
   Box,
   Button,
   CardContent,
+  IconButton,
   InputAdornment,
   Paper,
   Stack,
@@ -16,6 +18,8 @@ import {
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
 import LockRoundedIcon from '@mui/icons-material/LockRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import { useSuperAdminAuth } from '../../hooks/useSuperAdminAuth';
 import type { ApiError } from '../../types/common';
 
@@ -33,6 +37,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
  */
 export function SuperAdminLoginPage() {
   const { login, isLoggingIn, loginError } = useSuperAdminAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -116,7 +121,7 @@ export function SuperAdminLoginPage() {
               />
               <TextField
                 label="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 fullWidth
                 error={Boolean(errors.password)}
@@ -131,6 +136,23 @@ export function SuperAdminLoginPage() {
                     startAdornment: (
                       <InputAdornment position="start">
                         <LockRoundedIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          edge="end"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          sx={{ color: 'rgba(255,255,255,0.5)' }}
+                        >
+                          {showPassword ? (
+                            <VisibilityOffRoundedIcon fontSize="small" />
+                          ) : (
+                            <VisibilityRoundedIcon fontSize="small" />
+                          )}
+                        </IconButton>
                       </InputAdornment>
                     ),
                   },

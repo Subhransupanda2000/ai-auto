@@ -18,6 +18,7 @@ import com.healthcareai.exception.BusinessRuleViolationException;
 import com.healthcareai.exception.ResourceNotFoundException;
 import com.healthcareai.repository.TenantRepository;
 import com.healthcareai.service.PatientService;
+import com.healthcareai.service.TenantMessageLogService;
 import com.healthcareai.tenant.TenantContext;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,11 +42,16 @@ public class ChatController {
     private final ReceptionistAgent receptionistAgent;
     private final PatientService patientService;
     private final TenantRepository tenantRepository;
+    private final TenantMessageLogService tenantMessageLogService;
 
     @PostMapping
     @Operation(summary = "Send a message to the AI receptionist and receive its reply.")
     public ResponseEntity<ChatResponse> chat(@Valid @RequestBody ChatRequest request) {
-        resolveTenantContext(request);
+        Tenant tenant = resolveTenantContext(request);
+        if (!tenant.isAiChatEnabled()) {
+            throw new BusinessRuleViolationException(
+                    "The AI chat assistant is currently disabled for this clinic. Please contact the front desk.");
+        }
 
         Channel channel = request.channel() != null ? request.channel() : Channel.WEB;
 
@@ -56,6 +62,7 @@ public class ChatController {
         }
 
         String reply = receptionistAgent.handleUserMessage(request.sessionId(), channel, patientId, request.message());
+        tenantMessageLogService.recordAiChatMessage(tenant.getId());
         return ResponseEntity.ok(new ChatResponse(request.sessionId(), reply));
     }
 
@@ -64,11 +71,15 @@ public class ChatController {
      * JwtAuthenticationFilter} (it runs on every request regardless of
      * whether the endpoint itself requires auth), so that takes priority.
      * Otherwise this must be an anonymous channel, which has to say which
-     * clinic it belongs to via {@code tenantSlug}.
+     * clinic it belongs to via {@code tenantSlug}. Either way, returns the
+     * resolved {@link Tenant} so the caller can check feature toggles
+     * (e.g. {@code aiChatEnabled}) without a second lookup.
      */
-    private void resolveTenantContext(ChatRequest request) {
-        if (TenantContext.getCurrentTenantId() != null) {
-            return;
+    private Tenant resolveTenantContext(ChatRequest request) {
+        UUID currentTenantId = TenantContext.getCurrentTenantId();
+        if (currentTenantId != null) {
+            return tenantRepository.findById(currentTenantId)
+                    .orElseThrow(() -> ResourceNotFoundException.of("Tenant", currentTenantId));
         }
         if (request.tenantSlug() == null || request.tenantSlug().isBlank()) {
             throw new BusinessRuleViolationException(
@@ -80,5 +91,6 @@ public class ChatController {
             throw new BusinessRuleViolationException("This clinic's account has been deactivated.");
         }
         TenantContext.setCurrentTenantId(tenant.getId());
+        return tenant;
     }
 }

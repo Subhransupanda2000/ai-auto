@@ -21,7 +21,10 @@ import {
 import Grid from '@mui/material/Grid2';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
-import { format } from 'date-fns';
+import CallRoundedIcon from '@mui/icons-material/CallRounded';
+import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
+import CakeRoundedIcon from '@mui/icons-material/CakeRounded';
+import { differenceInYears, format } from 'date-fns';
 import { PageHeader } from '../../components/common/PageHeader';
 import { LoadingState } from '../../components/common/LoadingState';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -97,40 +100,79 @@ export function PatientDetailPage() {
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, md: 4 }}>
-          <Card>
-            <CardContent>
+          <Card sx={{ overflow: 'hidden' }}>
+            <Box
+              sx={{
+                height: 72,
+                background: 'linear-gradient(135deg, #3B6FE0 0%, #2A50A8 55%, #0FB5A7 130%)',
+              }}
+            />
+            <CardContent sx={{ mt: -5 }}>
               <Stack alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
-                <Avatar sx={{ width: 72, height: 72, bgcolor: 'primary.main', fontSize: 28 }}>
+                <Avatar
+                  sx={{
+                    width: 84,
+                    height: 84,
+                    bgcolor: 'primary.main',
+                    fontSize: 30,
+                    fontWeight: 700,
+                    border: '4px solid',
+                    borderColor: 'background.paper',
+                  }}
+                >
                   {patient.firstName.charAt(0)}
                   {patient.lastName.charAt(0)}
                 </Avatar>
-                <Typography variant="h6">
-                  {patient.firstName} {patient.lastName}
-                </Typography>
-                {patient.gender && <Chip size="small" label={patient.gender} variant="outlined" />}
+                <Box textAlign="center">
+                  <Typography variant="h6">
+                    {patient.firstName} {patient.lastName}
+                  </Typography>
+                  {patient.dateOfBirth && (
+                    <Typography variant="body2" color="text.secondary">
+                      {differenceInYears(new Date(), new Date(patient.dateOfBirth))} years old
+                    </Typography>
+                  )}
+                </Box>
+                {patient.gender && (
+                  <Chip
+                    size="small"
+                    label={patient.gender}
+                    color={patient.gender === 'FEMALE' ? 'secondary' : patient.gender === 'MALE' ? 'primary' : 'default'}
+                    variant="outlined"
+                  />
+                )}
               </Stack>
               <Divider sx={{ mb: 2 }} />
-              <Stack spacing={1.5}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Phone
-                  </Typography>
-                  <Typography variant="body2">{patient.phoneNumber}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Email
-                  </Typography>
-                  <Typography variant="body2">{patient.email ?? '—'}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Date of birth
-                  </Typography>
-                  <Typography variant="body2">
-                    {patient.dateOfBirth ? format(new Date(patient.dateOfBirth), 'MMM d, yyyy') : '—'}
-                  </Typography>
-                </Box>
+              <Stack spacing={1.75}>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <CallRoundedIcon fontSize="small" color="action" />
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Phone
+                    </Typography>
+                    <Typography variant="body2">{patient.phoneNumber}</Typography>
+                  </Box>
+                </Stack>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <EmailRoundedIcon fontSize="small" color="action" />
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Email
+                    </Typography>
+                    <Typography variant="body2">{patient.email ?? '—'}</Typography>
+                  </Box>
+                </Stack>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <CakeRoundedIcon fontSize="small" color="action" />
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Date of birth
+                    </Typography>
+                    <Typography variant="body2">
+                      {patient.dateOfBirth ? format(new Date(patient.dateOfBirth), 'MMM d, yyyy') : '—'}
+                    </Typography>
+                  </Box>
+                </Stack>
               </Stack>
             </CardContent>
           </Card>
