@@ -12,7 +12,7 @@ public record CreateEnquiryRequest(
 
         @NotBlank @Email @Size(max = 255) String email,
 
-        @Size(max = 50) String phone,
+        @NotBlank @Size(max = 50) String phone,
 
         @Size(max = 255) String clinicName,
 

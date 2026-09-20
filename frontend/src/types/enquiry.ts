@@ -14,7 +14,7 @@ export interface Enquiry {
 export interface CreateEnquiryRequest {
   fullName: string;
   email: string;
-  phone?: string;
+  phone: string;
   clinicName?: string;
   message?: string;
 }

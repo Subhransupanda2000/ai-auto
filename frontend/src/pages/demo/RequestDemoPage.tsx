@@ -22,7 +22,7 @@ import type { ApiError } from '../../types/common';
 const demoSchema = z.object({
   fullName: z.string().min(1, 'Your name is required'),
   email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
-  phone: z.string().optional(),
+  phone: z.string().min(1, 'Phone number is required'),
   clinicName: z.string().optional(),
   message: z.string().optional(),
 });
@@ -41,7 +41,7 @@ export function RequestDemoPage() {
     requestDemo.mutate({
       fullName: values.fullName,
       email: values.email,
-      phone: values.phone || undefined,
+      phone: values.phone,
       clinicName: values.clinicName || undefined,
       message: values.message || undefined,
     });
@@ -148,7 +148,13 @@ export function RequestDemoPage() {
               helperText={errors.email?.message}
               {...register('email')}
             />
-            <TextField label="Phone (optional)" fullWidth {...register('phone')} />
+            <TextField
+              label="Phone"
+              fullWidth
+              error={Boolean(errors.phone)}
+              helperText={errors.phone?.message}
+              {...register('phone')}
+            />
             <TextField label="Clinic name (optional)" fullWidth {...register('clinicName')} />
             <TextField
               label="Anything you'd like us to know? (optional)"

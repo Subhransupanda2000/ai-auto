@@ -491,6 +491,9 @@ export function LoginPage() {
                 Try a live demo
               </Link>
             </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              Requested access already? Our admin will contact you shortly.
+            </Typography>
           </Stack>
 
           <Stack alignItems="center" spacing={0.5} sx={{ mt: 3 }}>
